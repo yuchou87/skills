@@ -80,6 +80,24 @@
         {"text": "展示了如何将 Pairwise 结果写入 Go table-driven test 结构"},
         {"text": "有方法论标注注释"}
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "Write Rust unit tests for this function:\n\npub fn create_user(\n    name: &str,\n    email: &str,\n    age: u32,\n    repo: &impl UserRepository,\n) -> Result<User, UserError> {\n    if name.trim().is_empty() {\n        return Err(UserError::NameRequired);\n    }\n    if !email.contains('@') || email.trim().is_empty() {\n        return Err(UserError::EmailInvalid);\n    }\n    if age < 1 || age > 150 {\n        return Err(UserError::AgeInvalid);\n    }\n    let user = User { id: Uuid::new_v4().to_string(), name: name.to_string(), email: email.to_string(), age };\n    repo.save(&user).map_err(|_| UserError::SaveFailed)?;\n    Ok(user)\n}",
+      "expected_output": "Use rstest #[case] for parameterized tests, mockall for MockUserRepository, cover equivalence classes and boundary values with technique annotations",
+      "files": [],
+      "assertions": [
+        {"text": "Uses #[cfg(test)] mod tests with use super::*"},
+        {"text": "Uses rstest #[rstest] + #[case] for parameterized tests"},
+        {"text": "Uses mockall MockUserRepository with expect_save()"},
+        {"text": "Has a happy path test verifying result and mock call"},
+        {"text": "Has separate test cases for name empty and name whitespace (EP·invalid·1, EP·invalid·2)"},
+        {"text": "Has test case for invalid email format (EP·invalid·3)"},
+        {"text": "Has age boundary value tests covering at least age=0, age=1, age=150, age=151"},
+        {"text": "Has test for repo save failure returning UserError::SaveFailed"},
+        {"text": "Uses assert_eq!(result.unwrap_err(), ...) for error assertions"},
+        {"text": "Technique annotations present as comments or #[case] parameters"}
+      ]
     }
   ]
 }

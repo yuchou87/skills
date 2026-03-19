@@ -10,7 +10,7 @@
 
 与随意生成测试不同，本 Skill 强制应用测试设计方法论：先分析函数特征，再系统推导测试用例，最后生成代码。覆盖等价类划分、边界值分析、决策表、Pairwise 组合等经典方法。
 
-**支持语言**：Go / Python / Java / TypeScript
+**支持语言**：Go / Python / Java / TypeScript / Rust
 
 ---
 
@@ -101,6 +101,7 @@ unit-test-methodology/
     ├── python.md             # Python / pytest 规范与示例
     ├── java.md               # Java / JUnit 5 规范与示例
     ├── typescript.md         # TypeScript / Vitest 规范与示例
+    ├── rust.md               # Rust / rstest / mockall 规范与示例
     ├── techniques.md         # 方法论详细说明
     └── patterns.md           # 通用测试模式
 ```

@@ -10,7 +10,7 @@
 
 | Skill | 描述 | 文档 |
 |-------|------|------|
-| [unit-test-methodology](unit-test-methodology/) | 系统化单元测试生成，强制应用等价类、边界值、决策表等测试方法论，支持 Go / Python / Java / TypeScript | [README](unit-test-methodology/README.zh.md) |
+| [unit-test-methodology](unit-test-methodology/) | 系统化单元测试生成，强制应用等价类、边界值、决策表等测试方法论，支持 Go / Python / Java / TypeScript / Rust | [README](unit-test-methodology/README.zh.md) |
 
 ---
 
