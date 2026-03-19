@@ -1,0 +1,85 @@
+{
+  "skill_name": "unit-test-methodology",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我给这个 Go 函数写单元测试：\n\nfunc CreateUser(name, email string, age int, repo UserRepository) (*User, error) {\n    if name == \"\" {\n        return nil, ErrNameRequired\n    }\n    if !isValidEmail(email) {\n        return nil, ErrEmailInvalid\n    }\n    if age < 1 || age > 150 {\n        return nil, ErrAgeInvalid\n    }\n    user := &User{ID: uuid.New().String(), Name: name, Email: email, Age: age}\n    if err := repo.Save(user); err != nil {\n        return nil, ErrSaveFailed\n    }\n    return user, nil\n}",
+      "expected_output": "使用 Go table-driven test 结构，包含等价类和边界值测试用例，每个用例标注方法论",
+      "files": [],
+      "assertions": [
+        {"text": "使用了 table-driven test 结构（tests := []struct{...}）"},
+        {"text": "有 happy path 用例"},
+        {"text": "有 name 为空的无效等价类用例"},
+        {"text": "有 email 格式无效的无效等价类用例"},
+        {"text": "有 age 边界值用例（0, 1, 150, 151 中至少覆盖 3 个）"},
+        {"text": "有 repo.Save 失败的依赖异常用例"},
+        {"text": "使用了 t.Parallel() 并发执行"},
+        {"text": "用例名称描述场景而非用 test1/case1"},
+        {"text": "有方法论标注注释（如 EP·valid, BV·min 等）"},
+        {"text": "有 mock repo 的副作用验证"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "给这个 Python 函数生成 pytest 测试：\n\ndef calculate_discount(price: float, user_tier: str, is_member: bool) -> float:\n    if price <= 0:\n        raise ValueError('price must be positive')\n    if user_tier not in ('bronze', 'silver', 'gold'):\n        raise ValueError('invalid user tier')\n    discount = 0.0\n    if user_tier == 'gold':\n        discount = 0.20\n    elif user_tier == 'silver':\n        discount = 0.10\n    elif user_tier == 'bronze':\n        discount = 0.05\n    if is_member:\n        discount += 0.05\n    return price * (1 - min(discount, 0.25))",
+      "expected_output": "使用 pytest.mark.parametrize 结构，覆盖等价类、边界值和决策表",
+      "files": [],
+      "assertions": [
+        {"text": "使用了 @pytest.mark.parametrize"},
+        {"text": "有 price 边界值测试（price=0 和 price 为正数）"},
+        {"text": "有 user_tier 等价类测试（bronze/silver/gold 各一个有效类，plus 无效值）"},
+        {"text": "使用了决策表覆盖 user_tier × is_member 的组合"},
+        {"text": "用例有描述性 id 或 technique 参数"},
+        {"text": "有验证折扣上限 25% 的用例"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "为这个 Java 服务方法写 JUnit 5 测试：\n\npublic Order placeOrder(String userId, List<OrderItem> items, String couponCode) {\n    User user = userRepo.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));\n    if (items == null || items.isEmpty()) {\n        throw new EmptyOrderException();\n    }\n    BigDecimal total = calculateTotal(items);\n    if (couponCode != null && !couponCode.isBlank()) {\n        Coupon coupon = couponRepo.findByCode(couponCode).orElseThrow(CouponNotFoundException::new);\n        total = coupon.apply(total);\n    }\n    Order order = new Order(user, items, total);\n    return orderRepo.save(order);\n}",
+      "expected_output": "使用 JUnit 5 + Mockito + AssertJ，包含等价类、依赖异常和 mock 验证",
+      "files": [],
+      "assertions": [
+        {"text": "使用了 @ExtendWith(MockitoExtension.class)"},
+        {"text": "使用了 @Mock 注解 mock 依赖"},
+        {"text": "有 items 为空/null 的等价类测试"},
+        {"text": "有 userId 不存在时抛出 UserNotFoundException 的测试"},
+        {"text": "有 couponCode 为空字符串时不应用优惠券的测试"},
+        {"text": "有 couponCode 无效时抛出 CouponNotFoundException 的测试"},
+        {"text": "用 verify() 验证了 orderRepo.save() 的调用"},
+        {"text": "用了 @ParameterizedTest 或 @MethodSource"},
+        {"text": "使用了 AssertJ 的 assertThatThrownBy"}
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "给这个 TypeScript 函数写 Vitest 单元测试：\n\nasync function transferMoney(\n  fromAccountId: string,\n  toAccountId: string,\n  amount: number,\n  accountRepo: AccountRepository\n): Promise<Transaction> {\n  if (amount <= 0) throw new InvalidAmountError('amount must be positive')\n  const from = await accountRepo.findById(fromAccountId)\n  if (!from) throw new AccountNotFoundError(fromAccountId)\n  const to = await accountRepo.findById(toAccountId)\n  if (!to) throw new AccountNotFoundError(toAccountId)\n  if (from.balance < amount) throw new InsufficientBalanceError()\n  from.balance -= amount\n  to.balance += amount\n  await accountRepo.save(from)\n  await accountRepo.save(to)\n  return { fromAccountId, toAccountId, amount, createdAt: new Date() }\n}",
+      "expected_output": "使用 Vitest + vi.fn() mock，覆盖等价类、边界值和副作用验证",
+      "files": [],
+      "assertions": [
+        {"text": "使用了 describe + it.each 结构"},
+        {"text": "有 amount=0 的边界值测试（期望 InvalidAmountError）"},
+        {"text": "有 amount 为负数的等价类测试"},
+        {"text": "有 fromAccount 不存在的测试"},
+        {"text": "有 toAccount 不存在的测试"},
+        {"text": "有余额不足的测试"},
+        {"text": "happy path 中验证了 accountRepo.save 被调用了两次"},
+        {"text": "happy path 中验证了 from.balance 和 to.balance 都被正确更新"},
+        {"text": "使用了 vi.fn().mockResolvedValue()"},
+        {"text": "使用了 vi.clearAllMocks() 在 beforeEach 中"}
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "这个函数有 4 个参数，帮我用 Pairwise 方法生成 Go 测试：\n\nfunc FilterUsers(role string, status string, isVerified bool, plan string) []User",
+      "expected_output": "识别需要 Pairwise，提示用 caseforge pairwise 命令，并展示如何在 Go table test 中使用结果",
+      "files": [],
+      "assertions": [
+        {"text": "识别出参数 ≥ 4，需要 Pairwise"},
+        {"text": "提供了 caseforge pairwise 命令示例，包含 role/status/isVerified/plan 参数"},
+        {"text": "说明了 Pairwise 的压缩效果（全组合数 vs Pairwise 数）"},
+        {"text": "展示了如何将 Pairwise 结果写入 Go table-driven test 结构"},
+        {"text": "有方法论标注注释"}
+      ]
+    }
+  ]
+}
