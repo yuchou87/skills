@@ -88,6 +88,9 @@ test "createUser - equivalence classes and boundary values" {
     };
 
     for (cases) |c| {
+        // print case name so failures are diagnosable — Zig has no t.Run subtests
+        std.debug.print("\n  [{s}] {s}", .{ c.technique, c.name });
+
         var repo = MockUserRepo.init();
         const result = createUser(c.input_name, c.input_email, c.input_age, repo.interface());
 
@@ -182,7 +185,7 @@ test "Order state transitions" {
     const Case = struct {
         name: []const u8,
         initial: OrderStatus,
-        action: fn (*Order) UserError!void,
+        action: *const fn (*Order) anyerror!void,
         expected_status: OrderStatus,
         expect_err: ?UserError,
         technique: []const u8,
@@ -198,6 +201,7 @@ test "Order state transitions" {
     };
 
     for (cases) |c| {
+        std.debug.print("\n  [{s}] {s}", .{ c.technique, c.name });
         var order = Order{ .status = c.initial };
         const result = c.action(&order);
         if (c.expect_err) |expected| {
@@ -321,6 +325,28 @@ if (result) |_| {
 } else |err| {
     try testing.expectEqual(ExpectedError.SomeVariant, err);
 }
+```
+
+---
+
+## Table-Driven Test Failure Diagnosis
+
+Zig has no sub-test mechanism like Go's `t.Run`. When a case fails inside a `for` loop, the output only shows the parent `test` block name. Always print the case name before assertions so failures are diagnosable:
+
+```zig
+for (cases) |c| {
+    std.debug.print("\n  [{s}] {s}", .{ c.technique, c.name });
+    // assertions follow ...
+}
+```
+
+Sample output when a case fails:
+```
+Test [7/12] test.createUser - equivalence classes and boundary values...
+  [EP·valid] valid input - creates user successfully
+  [EP·invalid·1: name empty] empty name - invalid EP 1
+  [BV·min-1] age=0 - below min boundary
+FAIL (TestUnexpectedResult)
 ```
 
 ---
