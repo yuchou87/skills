@@ -98,6 +98,23 @@
         {"text": "Uses assert_eq!(result.unwrap_err(), ...) for error assertions"},
         {"text": "Technique annotations present as comments or #[case] parameters"}
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "Write Zig unit tests for this function:\n\npub fn create_user(\n    name: []const u8,\n    email: []const u8,\n    age: u32,\n    repo: UserRepository,\n) UserError!User {\n    if (name.len == 0) return UserError.NameRequired;\n    if (std.mem.indexOf(u8, email, \"@\") == null) return UserError.EmailInvalid;\n    if (age < 1 or age > 150) return UserError.AgeInvalid;\n    const user = User{ .name = name, .email = email, .age = age };\n    repo.save(user) catch return UserError.SaveFailed;\n    return user;\n}",
+      "expected_output": "Use table-driven tests with anonymous struct array, comptime interface mock for UserRepository, cover equivalence classes and boundary values with technique annotations",
+      "files": [],
+      "assertions": [
+        {"text": "Uses const testing = std.testing"},
+        {"text": "Uses table-driven pattern with array of anonymous structs containing technique field"},
+        {"text": "Uses MockUserRepo comptime interface with save_calls counter"},
+        {"text": "Has happy path case verifying user fields with expectEqualStrings"},
+        {"text": "Has separate cases for empty name and invalid email (EP·invalid·1, EP·invalid·2)"},
+        {"text": "Has age boundary value cases covering age=0, age=1, age=150, age=151"},
+        {"text": "Has test for repo save failure returning UserError.SaveFailed"},
+        {"text": "Uses try testing.expectError(UserError.X, result) for error assertions"},
+        {"text": "Technique annotations present in technique field or comments"}
+      ]
     }
   ]
 }

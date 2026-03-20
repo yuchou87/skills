@@ -12,7 +12,7 @@ description: >
   and use decision tables for multi-condition branches.
   Every test case must be annotated with its source technique to guarantee
   systematic coverage without missing critical boundary scenarios.
-  Supports Go / Python / Java / TypeScript / Rust. Trigger even when the user just says "write a test".
+  Supports Go / Python / Java / TypeScript / Rust / Zig. Trigger even when the user just says "write a test".
 ---
 
 # Unit Test Methodology Skill
@@ -38,6 +38,7 @@ Identify the language and load the corresponding reference:
 | Java | `references/java.md` |
 | TypeScript / JavaScript | `references/typescript.md` |
 | Rust | `references/rust.md` |
+| Zig | `references/zig.md` |
 
 If the language is unclear, ask the user or infer from code style.
 

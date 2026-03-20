@@ -10,7 +10,7 @@
 
 | Skill | Description | Docs |
 |-------|-------------|------|
-| [unit-test-methodology](unit-test-methodology/) | Systematic unit test generation enforcing equivalence partitioning, boundary value analysis, decision tables, and more. Supports Go / Python / Java / TypeScript / Rust | [README](unit-test-methodology/README.md) |
+| [unit-test-methodology](unit-test-methodology/) | Systematic unit test generation enforcing equivalence partitioning, boundary value analysis, decision tables, and more. Supports Go / Python / Java / TypeScript / Rust / Zig | [README](unit-test-methodology/README.md) |
 
 ---
 

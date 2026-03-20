@@ -10,7 +10,7 @@
 
 Unlike ad-hoc test generation, this Skill enforces a structured testing methodology: analyze the function first, systematically derive test cases, then generate code. It applies classical techniques including Equivalence Partitioning, Boundary Value Analysis, Decision Tables, and Pairwise combinatorial testing.
 
-**Supported languages**: Go / Python / Java / TypeScript / Rust
+**Supported languages**: Go / Python / Java / TypeScript / Rust / Zig
 
 ---
 
@@ -101,6 +101,7 @@ unit-test-methodology/
     ├── java.md               # Java / JUnit 5 conventions and examples
     ├── typescript.md         # TypeScript / Vitest conventions and examples
     ├── rust.md               # Rust / rstest / mockall conventions and examples
+    ├── zig.md                # Zig / std.testing / comptime interface conventions and examples
     ├── techniques.md         # Detailed methodology explanations
     └── patterns.md           # General testing patterns
 ```
