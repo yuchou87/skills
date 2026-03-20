@@ -8,9 +8,9 @@
 
 ## Skills 列表
 
-| Skill | 描述 | 文档 |
-|-------|------|------|
-| [unit-test-methodology](unit-test-methodology/) | 系统化单元测试生成，强制应用等价类、边界值、决策表等测试方法论，支持 Go / Python / Java / TypeScript / Rust / Zig | [README](unit-test-methodology/README.zh.md) |
+| Skill | 描述 | 快速安装 | 文档 |
+|-------|------|----------|------|
+| [unit-test-methodology](unit-test-methodology/) | 系统化单元测试生成，强制应用等价类、边界值、决策表等测试方法论，支持 Go / Python / Java / TypeScript / Rust / Zig | `npx skills add https://github.com/yuchou87/skills --skill unit-test-methodology` | [README](unit-test-methodology/README.zh.md) |
 
 ---
 

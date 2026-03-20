@@ -8,9 +8,9 @@
 
 ## Skills
 
-| Skill | Description | Docs |
-|-------|-------------|------|
-| [unit-test-methodology](unit-test-methodology/) | Systematic unit test generation enforcing equivalence partitioning, boundary value analysis, decision tables, and more. Supports Go / Python / Java / TypeScript / Rust / Zig | [README](unit-test-methodology/README.md) |
+| Skill | Description | Quick Install | Docs |
+|-------|-------------|---------------|------|
+| [unit-test-methodology](unit-test-methodology/) | Systematic unit test generation enforcing equivalence partitioning, boundary value analysis, decision tables, and more. Supports Go / Python / Java / TypeScript / Rust / Zig | `npx skills add https://github.com/yuchou87/skills --skill unit-test-methodology` | [README](unit-test-methodology/README.md) |
 
 ---
 
