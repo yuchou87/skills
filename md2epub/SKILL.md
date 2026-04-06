@@ -1,64 +1,71 @@
 ---
 name: md2epub
 description: >
-  将 Markdown 文件转换为 EPUB3 电子书。支持单文件或多文件合并，
-  自动将 Mermaid 代码块渲染为图片嵌入电子书。
-  当用户说"生成电子书"、"转成 epub"、"打包成电子书"、"md 转 epub" 时使用本技能。
-version: 1.1.0
+  Convert Markdown files to EPUB3 ebooks. Supports single-file or multi-file merge,
+  automatically renders Mermaid code blocks as embedded images.
+  Trigger keywords: "generate ebook", "convert to epub", "md to epub",
+  "生成电子书", "转成 epub", "打包成电子书", "md 转 epub"
+version: 1.2.0
 ---
 
-# Markdown → EPUB 转换技能
+# Markdown → EPUB Conversion Skill
 
-## 脚本目录
+## Scripts
 
-脚本位于本 SKILL.md 同级的 `scripts/` 目录。
+Scripts are located in the `scripts/` directory alongside this SKILL.md.
 
-**重要**：在步骤 3 前，必须先解析 `{baseDir}` 的实际路径：
+**Important**: Resolve `SKILL_DIR` before Step 3:
 
 ```bash
-# 获取本 SKILL.md 所在目录的绝对路径（Issue #5 修复）
-SKILL_DIR="$(cd "$(dirname "$(python3 -c "import subprocess; print(subprocess.check_output(['find', '$HOME/.claude/skills/md2epub', '-name', 'SKILL.md']).decode().strip())")")" && pwd)"
-# 或者更简单：直接用已知安装路径
 SKILL_DIR="${HOME}/.claude/skills/md2epub"
 ```
 
-| 脚本 | 用途 |
-|------|------|
-| `scripts/preprocess_mermaid.py` | 将 Markdown 中的 mermaid 代码块渲染为 PNG，并替换为图片引用 |
+| Script | Purpose |
+|--------|---------|
+| `scripts/preprocess_mermaid.py` | Renders mermaid code blocks in Markdown to PNG images and replaces them with image references |
 
-## 前置依赖检查
+## Prerequisite Check
 
-执行前先确认以下工具可用，若缺失则提示用户安装：
+Confirm the following tools are available before proceeding; prompt the user to install any that are missing:
 
 ```bash
-# 必须
-which pandoc   || echo "❌ 缺少 pandoc：brew install pandoc"
-which python3  || echo "❌ 缺少 python3"
+# Required
+which pandoc   || echo "❌ Missing pandoc: brew install pandoc"
+which python3  || echo "❌ Missing python3"
 
-# Mermaid 渲染（有 npx 则自动安装，无需手动）
-which npx      || echo "⚠ 无 npx，Mermaid 图将保留为代码块（需安装 Node.js）"
+# Mermaid rendering (auto-installed via npx on first run — no manual setup needed)
+which npx      || echo "⚠ No npx — Mermaid diagrams will be kept as code blocks (install Node.js)"
 ```
 
-## 工作流程
+## Workflow
 
-### 步骤 1：收集输入信息
+### Step 1: Collect Input Parameters
 
-询问或从上下文推断以下参数：
+Ask or infer from context:
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| `input_files` | 要转换的 MD 文件，可以是单个文件、文件列表、或目录（自动按名称排序） | 当前目录的 `*.md` |
-| `output_epub` | 输出文件路径 | `{第一个文件的目录}/book.epub` |
-| `title` | 书名 | 第一个 H1 标题，或文件名 |
-| `author` | 作者 | （可选）留空则不写入 |
-| `lang` | 语言代码 | `zh-CN` |
-| `cover` | 封面图片路径 | （可选）留空则无封面 |
-| `render_mermaid` | 是否渲染 Mermaid 图表 | `true`（若有 npx） |
-| `alt_label` | 图片 alt 文字前缀 | `图表`（中文）或 `Diagram`（英文） |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `input_files` | MD files to convert: single file, list of files, or directory (auto-sorted by name) | `*.md` in current directory |
+| `output_epub` | Output file path | `{first file's directory}/book.epub` |
+| `title` | Book title | First H1 heading, or filename |
+| `author` | Author name | (optional) omit if blank |
+| `lang` | Language mode | `en` |
+| `cover` | Cover image path | (optional) omit for no cover |
+| `render_mermaid` | Whether to render Mermaid diagrams | `true` (if npx available) |
 
-**文件排序规则**：若输入为目录，按文件名升序排列，数字前缀的文件（如 `01_`, `02_`）会自然有序。
+**Language modes** — `lang` controls both the EPUB metadata language and the default image alt-text prefix:
 
-### 步骤 2：建立构建目录
+| `lang` value | EPUB `lang` field | Default `alt_label` | Use case |
+|---|---|---|---|
+| `en` (default) | `en` | `Diagram` | English content |
+| `zh-CN` | `zh-CN` | `图表` | Chinese content |
+| `bilingual` | `zh-CN` | `Diagram / 图表` | Mixed Chinese–English content |
+
+The user can override `alt_label` explicitly regardless of `lang`.
+
+**File sort order**: When input is a directory, files are sorted ascending by name; files with numeric prefixes (e.g. `01_`, `02_`) are naturally ordered.
+
+### Step 2: Set Up Build Directory
 
 ```bash
 BUILD_DIR="$(dirname {output_epub})/_epub_build"
@@ -66,9 +73,9 @@ IMG_DIR="${BUILD_DIR}/images"
 mkdir -p "${BUILD_DIR}" "${IMG_DIR}"
 ```
 
-### 步骤 3：预处理 Mermaid 图表
+### Step 3: Preprocess Mermaid Diagrams
 
-若 `render_mermaid=true` 且 `npx` 可用，对每个输入文件执行：
+If `render_mermaid=true` and `npx` is available, run for each input file:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/preprocess_mermaid.py" \
@@ -78,36 +85,59 @@ python3 "${SKILL_DIR}/scripts/preprocess_mermaid.py" \
   "{alt_label}"
 ```
 
-- 脚本会把 `![{alt_label} N](xxx.png)` 写入处理后的 MD 文件
-- PNG 图片保存在 `${IMG_DIR}/` 下
-- 若某个 mermaid 块渲染失败（含超时），保留原始代码块（降级，不中断）
-- 首次运行 npx 会下载 mermaid-cli，可能需要 1-2 分钟，属正常现象
+- The script writes `![{alt_label} N](xxx.png)` into the processed MD file
+- PNG images are saved under `${IMG_DIR}/`
+- If a mermaid block fails to render (including timeout), the original code block is preserved — build continues
+- First run of npx will download mermaid-cli, which may take 1–2 minutes
 
-若 `render_mermaid=false` 或无 `npx`，直接将原始 MD 文件复制到 `${BUILD_DIR}/`。
+If `render_mermaid=false` or `npx` is unavailable, copy the original MD files directly to `${BUILD_DIR}/`.
 
-将渲染好的 PNG 复制到 `${BUILD_DIR}/`（pandoc 需要从同一目录解析图片相对路径）：
+Copy rendered PNGs to `${BUILD_DIR}/` so pandoc can resolve relative image paths:
 
 ```bash
 cp "${IMG_DIR}"/*.png "${BUILD_DIR}/" 2>/dev/null || true
 ```
 
-### 步骤 4：生成 EPUB 元数据文件
+### Step 4: Generate EPUB Metadata File
 
-在 `${BUILD_DIR}/metadata.yaml` 写入（toc 选项只在此处指定，不在 pandoc 命令重复）：
+Write `${BUILD_DIR}/metadata.yaml` (TOC options belong here only — do not repeat in the pandoc command):
 
+**For `lang=en`:**
 ```yaml
 ---
 title: '{title}'
-author: '{author}'     # 若为空则省略此行
-lang: {lang}
+author: '{author}'     # omit this line if author is blank
+lang: en
 toc: true
 toc-depth: 2
 ---
 ```
 
-### 步骤 5：调用 pandoc 生成 EPUB
+**For `lang=zh-CN`:**
+```yaml
+---
+title: '{title}'
+author: '{author}'
+lang: zh-CN
+toc: true
+toc-depth: 2
+---
+```
 
-用子 shell 执行以避免影响当前 shell 的工作目录（Issue #4 修复）：
+**For `lang=bilingual`:**
+```yaml
+---
+title: '{title}'
+author: '{author}'
+lang: zh-CN
+toc: true
+toc-depth: 2
+---
+```
+
+### Step 5: Run pandoc to Generate EPUB
+
+Use a subshell to avoid changing the agent's current working directory (Issue #4 fix):
 
 ```bash
 (
@@ -119,70 +149,74 @@ toc-depth: 2
     --split-level=1 \
     --resource-path="${BUILD_DIR}" \
     --wrap=none \
-    {--epub-cover-image="{cover}" 若有封面} \
-    {处理后的 MD 文件列表，按顺序}
+    {--epub-cover-image="{cover}" if cover is set} \
+    {processed MD files in order}
 )
 ```
 
-**关于 `--split-level`**：
-- `1`（默认）：每个 H1 标题生成独立章节文件，适合多文件合并场景
-- `2`：按 H2 分割，适合单文件且 H1 极多的情况
+**About `--split-level`**:
+- `1` (default): each H1 heading becomes a separate chapter file — best for multi-file merges
+- `2`: split at H2 — better for a single file with very many H1 sections
 
-### 步骤 6：清理并输出结果报告
+### Step 6: Clean Up and Report
 
-构建完成后删除临时构建目录（保持用户项目整洁）：
+Delete the temporary build directory after a successful build:
 
 ```bash
 rm -rf "${BUILD_DIR}"
 ```
 
-然后输出报告：
+Then output a report:
 
 ```
-✅ 电子书生成成功
+✅ Ebook generated successfully
 
-文件：{output_epub}
-大小：{文件大小}
-章节：{章节数}（来自 {文件数} 个 MD 文件）
-图表：{成功渲染数} 张图片 / {失败数} 张降级为代码块
-
-后续操作：
-  用 Calibre 打开：open '{output_epub}'
-  转为 PDF：ebook-convert '{output_epub}' '{output_epub%.epub}.pdf'
-  转为 MOBI：ebook-convert '{output_epub}' '{output_epub%.epub}.mobi'
+File:     {output_epub}
+Size:     {file size}
+Chapters: {chapter count} (from {file count} MD file(s))
+Diagrams: {success count} rendered as images / {fail count} kept as code blocks
 ```
 
-## 常见问题处理
+## Troubleshooting
 
-| 问题 | 处理方式 |
-|------|---------|
-| 首次运行 npx 很慢 | 正常，首次下载 mermaid-cli 需 1-2 分钟，脚本超时已设为 120 秒 |
-| Mermaid 渲染失败 | 保留代码块，继续生成，在报告中标注失败数 |
-| pandoc 找不到图片 | 确认步骤 5 使用了子 shell `(cd ... && pandoc ...)` 形式 |
-| 中文显示"Abstract"警告 | 可忽略，是 pandoc 的语言包缺失警告，不影响内容 |
-| EPUB 文件损坏 | 用 `epubcheck {output_epub}` 验证（若已安装） |
-| 某 MD 文件含相对路径图片 | 将图片复制到 `${BUILD_DIR}/` 后再转换 |
+| Problem | Resolution |
+|---------|-----------|
+| First npx run is slow | Normal — first download of mermaid-cli takes 1–2 min; script timeout is 120 s |
+| Mermaid render fails | Code block is preserved; build continues; fail count shown in report |
+| pandoc can't find images | Confirm Step 5 uses the subshell form `(cd ... && pandoc ...)` |
+| "Abstract" warning with Chinese content | Harmless — pandoc language-pack warning; does not affect content |
+| EPUB file is corrupted | Validate with `epubcheck {output_epub}` (if installed) |
+| MD file has relative image paths | Copy those images to `${BUILD_DIR}/` before converting |
 
-## 使用示例
+## Examples
 
-**示例 1：将目录下的全部 MD 文件生成电子书**
-> 用户说："把 docs/explain/ 下的文件生成一本电子书"
+**Example 1: Convert all MD files in a directory**
+> User: "generate an ebook from docs/explain/"
 
-1. `input_files` = `docs/explain/01_*.md docs/explain/02_*.md ...`（按名称排序）
-2. `title` = 从第一个文件的第一个 H1 提取
-3. 执行完整工作流
+1. `input_files` = files in `docs/explain/` sorted by name
+2. `title` = first H1 in the first file
+3. Run full workflow
 
-**示例 2：单文件转换**
-> 用户说："把这个 README.md 转成 epub"
+**Example 2: Single file conversion**
+> User: "convert this README.md to epub"
 
 1. `input_files` = `README.md`
 2. `output_epub` = `README.epub`
-3. `render_mermaid` = 根据是否有 mermaid 代码块决定
-4. `--split-level=2` 可能更适合单文件场景
+3. `render_mermaid` = `true` only if the file contains mermaid blocks
+4. Consider `--split-level=2` for single-file with many sections
 
-**示例 3：指定元数据**
-> 用户说："生成电子书，书名《AI 架构指南》，作者张三"
+**Example 3: Chinese ebook with metadata**
+> User: "生成电子书，书名《AI 架构指南》，作者张三"
 
-1. `title` = `AI 架构指南`
-2. `author` = `张三`
-3. 其余参数正常推断
+1. `lang` = `zh-CN`
+2. `title` = `AI 架构指南`
+3. `author` = `张三`
+4. `alt_label` = `图表` (auto-derived from `lang`)
+
+**Example 4: Bilingual ebook**
+> User: "make a bilingual epub, English and Chinese"
+
+1. `lang` = `bilingual`
+2. `alt_label` = `Diagram / 图表` (auto-derived)
+3. EPUB `lang` field = `zh-CN`
+4. All other parameters inferred as usual

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-md2epub skill — Mermaid 预处理器
-将 Markdown 中的 ```mermaid 代码块渲染为 PNG 图片，并替换为图片引用。
-用法: python preprocess_mermaid.py <input.md> <output.md> <img_dir> [alt_label]
-  alt_label: 图片 alt 文字前缀，默认 "Diagram"（可传 "图表" 用于中文输出）
+md2epub skill — Mermaid preprocessor
+Renders ```mermaid code blocks in Markdown to PNG images and replaces them with image references.
+Usage: python preprocess_mermaid.py <input.md> <output.md> <img_dir> [alt_label]
+  alt_label: prefix for image alt text, default "Diagram"
 """
 import re
 import subprocess
@@ -19,10 +19,10 @@ def render_mermaid_blocks(
     alt_label: str = "Diagram",
 ) -> tuple[str, int, int]:
     """
-    渲染所有 mermaid 代码块为 PNG，返回 (处理后内容, 成功数, 失败数)。
-    支持 LF 和 CRLF 行尾，以及开头 fence 行尾有空格的情况。
+    Render all mermaid code blocks to PNG, return (processed content, success count, fail count).
+    Supports LF and CRLF line endings, and trailing spaces after the opening fence.
     """
-    # 兼容 CRLF 和 fence 后有空格的情况（S1）
+    # Compatible with CRLF and trailing whitespace after fence tag (S1)
     pattern = re.compile(r'```mermaid[ \t]*\r?\n(.*?)```', re.DOTALL)
     counter = [0]
     success = [0]
@@ -37,7 +37,7 @@ def render_mermaid_blocks(
         mmd_path = img_dir / f"{img_name}.mmd"
         png_path = img_dir / f"{img_name}.png"
 
-        # 删除旧的可能损坏的输出，确保结果可信（Issue #1）
+        # Remove any stale output to ensure result is trustworthy (Issue #1)
         png_path.unlink(missing_ok=True)
         mmd_path.write_text(diagram_code, encoding="utf-8")
 
@@ -48,11 +48,11 @@ def render_mermaid_blocks(
                  "-o", str(png_path),
                  "--backgroundColor", "white",
                  "--width", "1200"],
-                capture_output=True, text=True, timeout=120,  # 首次 npx 下载需要更长时间
+                capture_output=True, text=True, timeout=120,  # first npx run may need to download mermaid-cli
             )
         except (subprocess.TimeoutExpired, subprocess.SubprocessError) as exc:
-            # Issue #2：超时或子进程错误，降级为保留原始代码块
-            print(f"  ⚠ 渲染超时/错误 [图表 {counter[0]}]: {exc}", file=sys.stderr)
+            # Issue #2: on timeout or subprocess error, fall back to keeping the original code block
+            print(f"  ⚠ Render timeout/error [diagram {counter[0]}]: {exc}", file=sys.stderr)
             mmd_path.unlink(missing_ok=True)
             png_path.unlink(missing_ok=True)
             failed[0] += 1
@@ -60,10 +60,10 @@ def render_mermaid_blocks(
 
         mmd_path.unlink(missing_ok=True)
 
-        # Issue #1：验证输出文件存在且非空
+        # Issue #1: verify output file exists and is non-empty
         if result.returncode != 0 or not png_path.exists() or png_path.stat().st_size == 0:
             print(
-                f"  ⚠ 渲染失败 [图表 {counter[0]}]: {result.stderr.strip()[:100]}",
+                f"  ⚠ Render failed [diagram {counter[0]}]: {result.stderr.strip()[:100]}",
                 file=sys.stderr,
             )
             png_path.unlink(missing_ok=True)
@@ -80,7 +80,7 @@ def render_mermaid_blocks(
 def main():
     if len(sys.argv) < 4:
         print(
-            f"用法: {sys.argv[0]} <input.md> <output.md> <img_dir> [alt_label]",
+            f"Usage: {sys.argv[0]} <input.md> <output.md> <img_dir> [alt_label]",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -90,21 +90,21 @@ def main():
     img_dir = Path(sys.argv[3])
     alt_label = sys.argv[4] if len(sys.argv) > 4 else "Diagram"
 
-    # Issue #3：友好处理文件不存在的情况
+    # Issue #3: friendly error for missing input file
     try:
         content = input_path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        print(f"❌ 输入文件不存在: {input_path}", file=sys.stderr)
+        print(f"❌ Input file not found: {input_path}", file=sys.stderr)
         sys.exit(1)
     except OSError as exc:
-        print(f"❌ 读取文件失败: {exc}", file=sys.stderr)
+        print(f"❌ Failed to read file: {exc}", file=sys.stderr)
         sys.exit(1)
 
     img_dir.mkdir(parents=True, exist_ok=True)
     new_content, ok, fail = render_mermaid_blocks(content, img_dir, input_path.stem, alt_label)
     output_path.write_text(new_content, encoding="utf-8")
 
-    print(f"✓ {input_path.name} → {output_path.name}  [图表: {ok} 成功, {fail} 失败]")
+    print(f"✓ {input_path.name} → {output_path.name}  [diagrams: {ok} succeeded, {fail} failed]")
 
 
 if __name__ == "__main__":
