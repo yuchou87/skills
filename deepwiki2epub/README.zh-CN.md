@@ -25,12 +25,13 @@
 ## 安装方法
 
 ```bash
+# 1. 安装本 Skill
 cp -r deepwiki2epub ~/.claude/skills/deepwiki2epub
-```
 
-确保 DeepWiki MCP 已配置：
+# 2. 安装 md2epub skill（必需依赖）
+cp -r md2epub ~/.claude/skills/md2epub
 
-```bash
+# 3. 配置 DeepWiki MCP
 claude mcp add -s user -t http deepwiki https://mcp.deepwiki.com/mcp
 ```
 

@@ -7,10 +7,20 @@ description: >
   Trigger keywords: "deepwiki to epub", "deepwiki epub", "deepwiki ebook",
   "deepwiki 电子书", "deepwiki 转 epub", "从 deepwiki 生成电子书",
   "convert deepwiki to ebook", "download deepwiki as epub"
-version: 1.0.0
+version: 1.1.0
 ---
 
 # DeepWiki → EPUB Conversion Skill
+
+## Scripts
+
+No scripts in this skill. All processing is done inline.
+
+**Important**: Resolve `SKILL_DIR` before proceeding:
+
+```bash
+SKILL_DIR="${HOME}/.claude/skills/deepwiki2epub"
+```
 
 ## Prerequisites
 
@@ -33,7 +43,8 @@ Then restart your Claude Code session.
 This skill delegates EPUB generation to `md2epub`. Verify the skill exists:
 
 ```bash
-test -f "${HOME}/.claude/skills/md2epub/SKILL.md" && echo "OK" || echo "MISSING: install md2epub skill first"
+MD2EPUB_SKILL="${HOME}/.claude/skills/md2epub/SKILL.md"
+test -f "${MD2EPUB_SKILL}" && echo "OK" || echo "MISSING: install md2epub skill — cp -r md2epub ~/.claude/skills/md2epub"
 ```
 
 ### 3. Other Dependencies
@@ -57,6 +68,7 @@ Ask or infer from context:
 | `title` | Book title | `{repo} (from DeepWiki)` |
 | `author` | Author name | `{owner}` |
 | `lang` | Language mode: `en` / `zh-CN` / `bilingual` | `en` |
+| `cover` | Cover image path | (optional) omit for no cover |
 | `render_mermaid` | Whether to render Mermaid diagrams | `true` (if npx available) |
 
 **Repo format normalization**: Accept any of these formats and extract `{owner}/{repo}`:
@@ -64,6 +76,8 @@ Ask or infer from context:
 - `https://github.com/facebook/react`
 - `github.com/facebook/react`
 - `https://deepwiki.com/facebook/react`
+
+**Language inference**: If `lang` is not specified explicitly, infer from the user's prompt language (Chinese prompt → `zh-CN`, English prompt → `en`).
 
 ### Step 2: Fetch Wiki Structure
 
@@ -73,11 +87,11 @@ Call the DeepWiki MCP tool:
 read_wiki_structure({ "repoName": "{owner}/{repo}" })
 ```
 
-This returns the documentation hierarchy — a list of topics with IDs and titles.
+This returns the documentation hierarchy — a list of topics with titles.
 
 Record:
 - Total topic count
-- Topic order (for chapter sequencing)
+- Topic titles and order (for chapter sequencing and headings)
 
 If the repo is not indexed by DeepWiki, inform the user:
 
@@ -86,40 +100,44 @@ This repository hasn't been indexed by DeepWiki yet.
 Visit https://deepwiki.com/{owner}/{repo} to trigger indexing, then try again.
 ```
 
-### Step 3: Fetch All Topic Contents
+### Step 3: Fetch Wiki Contents
 
-Set up a working directory:
+Call the DeepWiki MCP tool to fetch all documentation content at once:
+
+```
+read_wiki_contents({ "repoName": "{owner}/{repo}" })
+```
+
+This returns the full documentation content for the repository as markdown.
+
+Set up a working directory anchored to the output path:
 
 ```bash
-WORK_DIR="./_deepwiki_export/{owner}-{repo}"
+WORK_DIR="$(dirname "{output}")/_deepwiki_export/{owner}-{repo}"
 mkdir -p "${WORK_DIR}"
 ```
 
-For each topic in the structure (in order), call:
+Split the returned content into separate chapter files based on the topic structure from Step 2. Use H1 headings (`# ...`) as chapter boundaries. Save each chapter as a numbered file:
 
 ```
-read_wiki_contents({ "repoName": "{owner}/{repo}", "topicId": "{topic_id}" })
-```
-
-Save each topic's markdown content to a numbered file:
-
-```
-{WORK_DIR}/01_introduction.md
-{WORK_DIR}/02_architecture.md
-{WORK_DIR}/03_core-concepts.md
+{WORK_DIR}/001_introduction.md
+{WORK_DIR}/002_architecture.md
+{WORK_DIR}/003_core-concepts.md
 ...
 ```
 
-Naming: `{two-digit sequence}_{topic_id_slugified}.md`
+Naming: `{three-digit sequence}_{topic_title_slugified}.md`
 
-**Error handling per topic:**
-- If a single topic fetch fails, log a warning and skip it
-- Continue with remaining topics
-- Track skipped topics for the final report
+Three-digit prefixes support repos with 100+ topics.
+
+**Splitting rules:**
+- Match each H1 heading in the content to a topic from the structure
+- If the content has no clear H1 boundaries, treat the entire content as a single chapter
+- Preserve all content between H1 boundaries (sub-headings, code blocks, etc.)
 
 ### Step 4: Post-process Markdown Files
 
-For each downloaded markdown file:
+For each chapter markdown file:
 
 1. **Ensure chapter heading**: If the file doesn't start with `# {topic_title}`, prepend it
 2. **Clean DeepWiki artifacts**: Remove any navigation links, breadcrumbs, or DeepWiki-specific UI elements if present in the markdown
@@ -135,7 +153,7 @@ mkdir -p "${WORK_DIR}/images"
 
 ### Step 5: Delegate to md2epub Skill
 
-Invoke the `md2epub` skill with the following parameters:
+Follow the **md2epub SKILL.md workflow starting from Step 2** (Set Up Build Directory), passing these parameters:
 
 | md2epub parameter | Value |
 |-------------------|-------|
@@ -144,9 +162,10 @@ Invoke the `md2epub` skill with the following parameters:
 | `title` | `{title}` |
 | `author` | `{author}` |
 | `lang` | `{lang}` |
+| `cover` | `{cover}` (omit if not set) |
 | `render_mermaid` | `{render_mermaid}` |
 
-The md2epub skill handles: Mermaid preprocessing, metadata generation, pandoc conversion, and build directory cleanup.
+Do **not** invoke md2epub as a separate skill call. Instead, read `${HOME}/.claude/skills/md2epub/SKILL.md` and execute its Steps 2–6 inline with the parameters above. This ensures a single continuous workflow.
 
 ### Step 6: Clean Up and Report
 
@@ -155,20 +174,19 @@ Remove the working directory:
 ```bash
 rm -rf "${WORK_DIR}"
 # Also remove parent if empty
-rmdir "./_deepwiki_export" 2>/dev/null || true
+rmdir "$(dirname "{output}")/_deepwiki_export" 2>/dev/null || true
 ```
 
 Output a report:
 
 ```
-DeepWiki → EPUB conversion complete
+✅ DeepWiki → EPUB conversion complete
 
 Repository: {owner}/{repo}
 File:       {output}
 Size:       {file_size}
-Chapters:   {success_count} of {total_topics} topics
-Skipped:    {skip_count} topics (if any)
-Diagrams:   (reported by md2epub)
+Chapters:   {chapter_count}
+Diagrams:   {success_count} rendered as images / {fail_count} kept as code blocks
 
 Source: https://deepwiki.com/{owner}/{repo}
 ```
@@ -180,8 +198,8 @@ Source: https://deepwiki.com/{owner}/{repo}
 | DeepWiki MCP not configured | Print setup command and stop |
 | md2epub skill not installed | Print installation instructions and stop |
 | Repo not indexed by DeepWiki | Suggest visiting deepwiki.com to trigger indexing |
-| Single topic fetch fails | Skip topic, continue with others, report at end |
-| All topic fetches fail | Abort and report error |
+| Content fetch returns empty | Abort and suggest the repo may not be indexed |
+| Content cannot be split into chapters | Use entire content as a single chapter |
 | md2epub conversion fails | Surface the error from md2epub (likely pandoc issue) |
 | External image download fails | Keep original URL reference, note in report |
 
@@ -210,13 +228,13 @@ lang   = zh-CN
 ```
 
 **Example 3: Custom title and output**
-> User: "convert deepwiki of anthropics/claude-code to epub, title 'Claude Code Internals', save to ~/Books/"
+> User: "convert deepwiki of anthropic/claude-code to epub, title 'Claude Code Internals', save to ~/Books/"
 
 ```
-repo   = anthropics/claude-code
-output = ~/Books/anthropics-claude-code.epub
+repo   = anthropic/claude-code
+output = ~/Books/anthropic-claude-code.epub
 title  = Claude Code Internals
-author = anthropics
+author = anthropic
 lang   = en
 ```
 

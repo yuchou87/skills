@@ -25,12 +25,13 @@ A Claude Code skill that converts [DeepWiki](https://deepwiki.com) repository do
 ## Installation
 
 ```bash
+# 1. Install this skill
 cp -r deepwiki2epub ~/.claude/skills/deepwiki2epub
-```
 
-Make sure the DeepWiki MCP server is configured:
+# 2. Install md2epub skill (required dependency)
+cp -r md2epub ~/.claude/skills/md2epub
 
-```bash
+# 3. Configure DeepWiki MCP server
 claude mcp add -s user -t http deepwiki https://mcp.deepwiki.com/mcp
 ```
 
