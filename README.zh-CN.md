@@ -32,6 +32,7 @@ cp -r /tmp/skills/<skill-name> ~/.claude/skills/<skill-name>
 | Skill | 说明 | 触发词 |
 |-------|------|--------|
 | [md2epub](md2epub/) | 将 Markdown 文件转换为 EPUB3 电子书，支持 Mermaid 图表渲染 | "生成电子书"、"转成 epub"、"generate ebook" |
+| [deepwiki2epub](deepwiki2epub/) | 将 DeepWiki 仓库文档转换为 EPUB3 电子书，支持离线阅读 | "deepwiki 电子书"、"deepwiki 转 epub" |
 
 ## 贡献指南
 
