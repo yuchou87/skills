@@ -32,6 +32,7 @@ Claude Code automatically discovers skills placed in `~/.claude/skills/`.
 |-------|-------------|---------|
 | [md2epub](md2epub/) | Convert Markdown files to EPUB3 ebooks with Mermaid diagram rendering | "generate ebook", "convert to epub", "生成电子书" |
 | [deepwiki2epub](deepwiki2epub/) | Convert DeepWiki repo docs to EPUB3 ebooks for offline reading | "deepwiki to epub", "deepwiki 电子书" |
+| [epub-translate](epub-translate/) | Translate an EPUB into another language and repackage it (mono / bilingual, resumable) | "translate epub", "翻译 epub", "epub 翻译成中文" |
 
 ## Contributing
 
