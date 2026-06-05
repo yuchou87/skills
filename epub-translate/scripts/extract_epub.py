@@ -146,12 +146,23 @@ def main() -> None:
                 seq += 1
                 title = extract_title(src_file.read_bytes()) or f"Chapter {seq}"
                 out_md = src_dir / f"{seq:03d}.md"
+                # Drop styling wrappers (fenced/native divs & spans, raw HTML,
+                # heading attributes) so chapters are clean prose Markdown. This
+                # keeps headings/lists/emphasis but strips `::: {.class}` and
+                # `{#id .class}` noise that would otherwise break the TOC and
+                # the bilingual interleave (which pairs blank-line blocks).
+                pandoc_to = (
+                    "markdown"
+                    "-raw_html-fenced_divs-native_divs-native_spans"
+                    "-header_attributes-bracketed_spans"
+                    "-inline_code_attributes-link_attributes"
+                )
                 proc = subprocess.run(
                     [
                         "pandoc",
                         str(src_file),
                         "--from", "html",
-                        "--to", "markdown-raw_html",
+                        "--to", pandoc_to,
                         "--wrap", "none",
                     ],
                     capture_output=True,

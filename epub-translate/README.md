@@ -117,4 +117,4 @@ epub-translate/
 Current version: **1.0.0**
 
 Changes:
-- `1.0.0` — Initial release: spine-ordered extraction + baoyu-translate delegation + md2epub packaging, mono/bilingual layouts, chapter-level resume
+- `1.0.0` — Initial release: spine-ordered extraction (strips Pandoc styling wrappers — fenced/native divs, heading attributes, and inline-code/link attributes — so Tailwind-style classes don't leak as literal text) + baoyu-translate delegation + md2epub packaging, mono/bilingual layouts, chapter-level resume. Verified end-to-end with epubcheck (0 errors) on a real 46-chapter EPUB, including a real baoyu-translate run on a code-heavy chapter.

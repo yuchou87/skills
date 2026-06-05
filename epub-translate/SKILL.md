@@ -103,6 +103,23 @@ If `EXTEND.md` does not exist, create it with a short header explaining it holds
 
 ### Step 3: Translate Each Chapter (delegate to baoyu-translate, with resume)
 
+**Pre-flight — keep the loop non-interactive.** baoyu-translate runs a *blocking*
+first-time setup (an `AskUserQuestion` prompt) when it finds no config `EXTEND.md`
+of its own. That would interrupt this per-chapter loop. Before translating, ensure
+its config exists so it runs unattended:
+
+```bash
+BAOYU_CFG="${HOME}/.baoyu-skills/baoyu-translate/EXTEND.md"
+if [ ! -f "${BAOYU_CFG}" ]; then
+  mkdir -p "$(dirname "${BAOYU_CFG}")"
+  printf -- '---\ntarget_language: %s\ndefault_mode: %s\naudience: technical\nstyle: technical\n---\n' \
+    "${target_lang}" "${mode}" > "${BAOYU_CFG}"
+fi
+```
+
+If the user already has a baoyu-translate config, leave it untouched and just pass
+per-call flags. Either way, also pass the book glossary via `--glossary "${WORK_DIR}/EXTEND.md"`.
+
 For each `src/NNN.md` in ascending numeric order:
 
 1. **Resume check** — if `${WORK_DIR}/${target_lang}/NNN.md` already exists and is non-empty, skip it (already translated). This makes the workflow resumable after interruption.

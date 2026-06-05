@@ -117,4 +117,4 @@ epub-translate/
 当前版本：**1.0.0**
 
 变更：
-- `1.0.0` — 首次发布：按 spine 顺序解包 + 委托 baoyu-translate 翻译 + 委托 md2epub 打包，支持纯译文/对照两种版式，章节级断点续传
+- `1.0.0` — 首次发布：按 spine 顺序解包（剥离 Pandoc 样式 wrapper——fenced/native div、标题属性、行内代码/链接属性——避免 Tailwind 类名以字面文本泄漏）+ 委托 baoyu-translate 翻译 + 委托 md2epub 打包，支持纯译文/对照两种版式，章节级断点续传。已在真实 46 章 EPUB 上端到端验证（epubcheck 零错误），含对代码密集章节真跑 baoyu-translate。
