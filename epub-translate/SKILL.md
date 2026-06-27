@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.1.0
+version: 1.2.0
 ---
 
 # EPUB Translation Skill
@@ -28,6 +28,7 @@ SKILL_DIR="${HOME}/.claude/skills/epub-translate"
 |--------|---------|
 | `scripts/extract_epub.py` | Unzip an EPUB into ordered chapter Markdown (spine order) + images + `meta.json` |
 | `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated) |
+| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten dead cross-reference links and strip Pandoc `{#id .class}` attribute blocks so the EPUB validates (no RSC-007/012/005 errors) |
 
 ## Prerequisites
 
@@ -134,12 +135,16 @@ Process chapters sequentially so the glossary accumulates in order. Report progr
 
 ### Step 4: Assemble Chapters for Packaging
 
-Decide the file set md2epub will consume, based on `layout`:
+Build a `PACK_DIR` of the exact files md2epub will consume. Always assemble into
+a **fresh** directory (never package straight from `${target_lang}/`, which is
+the resume cache — Step 4b rewrites these files in place).
 
-**`layout=mono`** — use the translated chapters directly:
+**`layout=mono`** — copy the translated chapters into a packaging dir:
 
 ```bash
-PACK_DIR="${WORK_DIR}/${target_lang}"
+PACK_DIR="${WORK_DIR}/mono"
+mkdir -p "${PACK_DIR}"
+cp "${WORK_DIR}/${target_lang}"/*.md "${PACK_DIR}/"
 ```
 
 **`layout=bilingual`** — interleave each chapter's source and translation:
@@ -156,7 +161,21 @@ done
 
 `interleave.py` aligns the two chapters with difflib, so every chapter is interleaved paragraph-by-paragraph (no whole-chapter fallback). Where the translator merged or split paragraphs, those few blocks are emitted as a grouped source-run-then-translation-run and the script prints a `NOTE: NNN.md aligned with N grouped paragraph region(s)` to stderr — collect these for the report so the user can spot-check those spots.
 
-Copy images so relative references resolve during packaging:
+### Step 4b: Clean the assembled Markdown (both layouts)
+
+Run `clean_md.py` over the `PACK_DIR` so the repackaged EPUB validates. It
+flattens dead cross-reference links (the source's `chNN.html` / `#anchor`
+targets don't exist in the new book → RSC-007/RSC-012 errors) and strips Pandoc
+`{#id .class}` attribute blocks (which duplicate across the two languages in a
+bilingual interleave → RSC-005 duplicate-ID errors). Real URLs, images, code
+blocks, and fence info strings are left untouched; the pass is idempotent.
+
+```bash
+python3 "${SKILL_DIR}/scripts/clean_md.py" "${PACK_DIR}"/*.md
+```
+
+Then copy images so relative references resolve during packaging (image refs are
+bare basenames, matching the flat `images/` store):
 
 ```bash
 cp "${WORK_DIR}/images"/* "${PACK_DIR}/" 2>/dev/null || true
@@ -180,7 +199,7 @@ Follow the **md2epub SKILL.md workflow starting from Step 2** (Set Up Build Dire
 Keep `${WORK_DIR}/${target_lang}/` is NOT required after success, but the resume cache is cheap to keep. Remove only the bilingual scratch and build dirs:
 
 ```bash
-rm -rf "${WORK_DIR}/bilingual"
+rm -rf "${WORK_DIR}/bilingual" "${WORK_DIR}/mono"
 # Keep src/ and ${target_lang}/ for re-runs, or remove the whole WORK_DIR if the user wants a clean state:
 # rm -rf "${WORK_DIR}"
 ```
@@ -212,6 +231,7 @@ List any chapters that printed a grouped-paragraph `NOTE` by filename so the use
 | `extract_epub.py` finds no chapters | Abort — likely not a valid EPUB or DRM-protected |
 | A chapter fails to translate | Leave its `${target_lang}/NNN.md` absent so a re-run retries it; note in report |
 | Translator merged/split paragraphs | `interleave.py` aligns with difflib and groups those blocks locally; it prints a `NOTE` to stderr — surface in report |
+| epubcheck reports RSC-007 / RSC-012 / RSC-005 errors | The Step 4b `clean_md.py` pass was skipped — run it over `PACK_DIR` and repackage |
 | md2epub packaging fails | Surface the pandoc error from md2epub |
 
 ## Examples

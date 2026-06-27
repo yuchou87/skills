@@ -78,8 +78,9 @@ flowchart TD
     E --> F[target/NNN.md]
     D --> F
     F --> G{layout?}
-    G -->|mono| H[md2epub]
-    G -->|bilingual| I[interleave.py] --> H
+    G -->|mono| K[clean_md.py]
+    G -->|bilingual| I[interleave.py] --> K
+    K --> H[md2epub]
     H --> J[output.epub]
 ```
 
@@ -92,7 +93,8 @@ epub-translate/
 ├── README.zh-CN.md           # Chinese documentation
 └── scripts/
     ├── extract_epub.py       # EPUB → ordered Markdown + images (spine order)
-    └── interleave.py         # source + translation → bilingual chapter
+    ├── interleave.py         # source + translation → bilingual chapter
+    └── clean_md.py           # flatten dead links + strip {#id} attrs before packaging
 ```
 
 ## Notes & limitations
@@ -114,8 +116,9 @@ epub-translate/
 
 ## Version
 
-Current version: **1.1.0**
+Current version: **1.2.0**
 
 Changes:
+- `1.2.0` — New `clean_md.py` packaging pass (Step 4b) flattens dead cross-reference links (`chNN.html`, `#anchor`) and strips Pandoc `{#id .class}` attribute blocks, eliminating the RSC-007/012 (missing resource / bad fragment) and RSC-005 (duplicate-ID, from bilingual-interleaved table captions) errors that epubcheck otherwise reports. It skips fenced code so code text and fence info strings are untouched, and is idempotent. Mono layout now assembles into a fresh `mono/` dir instead of packaging straight from the resume cache. Verified end-to-end with epubcheck (0 errors) on a real O'Reilly title with cross-references and id-tagged appendix tables.
 - `1.1.0` — Robust bilingual interleave + image paths. `interleave.py` now keeps fenced code blocks atomic (the old blank-line split tore fences that contained internal blank lines, which silently swallowed every following figure), aligns chapters with difflib so paragraph merge/split degrades locally instead of falling back to a whole-chapter layout, and de-duplicates figures. `extract_epub.py` now flattens image references to bare basenames so they resolve against the flat `images/` store (previously `assets/…`-style prefixes broke every figure at packaging time). Verified end-to-end with epubcheck (0 errors, 107 figures) on a real code- and figure-heavy O'Reilly title.
 - `1.0.0` — Initial release: spine-ordered extraction (strips Pandoc styling wrappers — fenced/native divs, heading attributes, and inline-code/link attributes — so Tailwind-style classes don't leak as literal text) + baoyu-translate delegation + md2epub packaging, mono/bilingual layouts, chapter-level resume. Verified end-to-end with epubcheck (0 errors) on a real 46-chapter EPUB, including a real baoyu-translate run on a code-heavy chapter.

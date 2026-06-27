@@ -78,8 +78,9 @@ flowchart TD
     E --> F[target/NNN.md]
     D --> F
     F --> G{版式?}
-    G -->|纯译文| H[md2epub]
-    G -->|对照| I[interleave.py] --> H
+    G -->|纯译文| K[clean_md.py]
+    G -->|对照| I[interleave.py] --> K
+    K --> H[md2epub]
     H --> J[output.epub]
 ```
 
@@ -92,7 +93,8 @@ epub-translate/
 ├── README.zh-CN.md           # 本文件
 └── scripts/
     ├── extract_epub.py       # EPUB → 有序 Markdown + 图片（按 spine 顺序）
-    └── interleave.py         # 原文 + 译文 → 对照章节
+    ├── interleave.py         # 原文 + 译文 → 对照章节
+    └── clean_md.py           # 打包前清理：失效链接降级 + 剥离 {#id} 属性
 ```
 
 ## 注意事项与限制
@@ -114,8 +116,9 @@ epub-translate/
 
 ## 版本
 
-当前版本：**1.1.0**
+当前版本：**1.2.0**
 
 变更：
+- `1.2.0` — 新增打包前清理步骤 `clean_md.py`（Step 4b）：把失效的交叉引用链接（`chNN.html`、`#锚点`）降级为纯文本，并剥离 Pandoc 的 `{#id .class}` 属性块，从而消除 epubcheck 原本会报的 RSC-007/012（资源/片段缺失）和 RSC-005（双语交错的表注同 id 重复）错误。该步骤跳过代码块（代码文本与 fence 信息串不受影响）且幂等。mono 版式现在装配到全新的 `mono/` 目录，不再直接从断点缓存打包。已在一本带交叉引用和带 id 附录表格的 O'Reilly 真书上端到端验证（epubcheck 零错误）。
 - `1.1.0` — 健壮的双语对照与图片路径。`interleave.py` 现在把 fenced 代码块作为原子整体处理（旧版按空行切块会切断含内部空行的代码块、fence 错乱并悄悄吞掉其后所有插图），用 difflib 对齐章节，使段落合并/拆分只在局部成组降级、不再整章回退，并对图片去重。`extract_epub.py` 现在把图片引用重写为纯 basename，与平铺的 `images/` 存储匹配（旧版保留 `assets/…` 之类前缀，打包时会让每张图失效）。已在一本代码与插图都密集的 O'Reilly 真书上端到端验证（epubcheck 零错误、107 张插图）。
 - `1.0.0` — 首次发布：按 spine 顺序解包（剥离 Pandoc 样式 wrapper——fenced/native div、标题属性、行内代码/链接属性——避免 Tailwind 类名以字面文本泄漏）+ 委托 baoyu-translate 翻译 + 委托 md2epub 打包，支持纯译文/对照两种版式，章节级断点续传。已在真实 46 章 EPUB 上端到端验证（epubcheck 零错误），含对代码密集章节真跑 baoyu-translate。
