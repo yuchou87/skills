@@ -111,6 +111,28 @@ def ensure_h1(md: str, title: str) -> str:
     return f"# {title}\n\n{md.lstrip()}"
 
 
+_IMG_REF = re.compile(r"(!\[[^\]]*\]\(\s*)(<?)([^)\s>]+)(>?)(\s+\"[^\"]*\")?(\s*\))")
+
+
+def flatten_image_paths(md: str) -> str:
+    """Rewrite local image references to bare basenames.
+
+    Images are stored flat in images/ by basename, but the EPUB's XHTML keeps
+    directory-prefixed paths (e.g. assets/foo.png, ../images/foo.png). Without
+    this, packaging copies images/* into the build dir root yet the Markdown
+    still points at assets/foo.png, so every figure breaks. Leaves real URLs
+    (http/https/data:) untouched.
+    """
+    def repl(m: "re.Match[str]") -> str:
+        url = m.group(3)
+        if re.match(r"[a-z][a-z0-9+.-]*:", url, re.I):  # scheme -> external URL
+            return m.group(0)
+        base = url.rsplit("/", 1)[-1]
+        return f"{m.group(1)}{m.group(2)}{base}{m.group(4)}{m.group(5) or ''}{m.group(6)}"
+
+    return _IMG_REF.sub(repl, md)
+
+
 def main() -> None:
     if len(sys.argv) != 3:
         sys.exit("usage: extract_epub.py <input.epub> <out_dir>")
@@ -176,6 +198,7 @@ def main() -> None:
                     seq -= 1
                     continue
                 md = ensure_h1(proc.stdout.strip(), title)
+                md = flatten_image_paths(md)
                 if not md.strip():
                     seq -= 1
                     continue

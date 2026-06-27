@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.0.0
+version: 1.1.0
 ---
 
 # EPUB Translation Skill
@@ -27,7 +27,7 @@ SKILL_DIR="${HOME}/.claude/skills/epub-translate"
 | Script | Purpose |
 |--------|---------|
 | `scripts/extract_epub.py` | Unzip an EPUB into ordered chapter Markdown (spine order) + images + `meta.json` |
-| `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (with TOC-safe fallback on paragraph-count mismatch) |
+| `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated) |
 
 ## Prerequisites
 
@@ -154,7 +154,7 @@ for f in "${WORK_DIR}/src"/*.md; do
 done
 ```
 
-If `interleave.py` prints a block-count-mismatch warning for any chapter, surface it in the final report (that chapter fell back to whole-chapter layout — original demoted, translation kept clean).
+`interleave.py` aligns the two chapters with difflib, so every chapter is interleaved paragraph-by-paragraph (no whole-chapter fallback). Where the translator merged or split paragraphs, those few blocks are emitted as a grouped source-run-then-translation-run and the script prints a `NOTE: NNN.md aligned with N grouped paragraph region(s)` to stderr — collect these for the report so the user can spot-check those spots.
 
 Copy images so relative references resolve during packaging:
 
@@ -197,10 +197,10 @@ Language: {original lang} → {target_lang}
 Layout:   {mono | bilingual}
 Mode:     {mode}
 Chapters: {translated_count}/{total} ({skipped} resumed from cache)
-Bilingual fallbacks: {n} chapter(s) (paragraph mismatch — listed below)
+Grouped-paragraph regions: {n} chapter(s) (translator merged/split text — listed below)
 ```
 
-List any bilingual fallback chapters by filename so the user can spot-check them.
+List any chapters that printed a grouped-paragraph `NOTE` by filename so the user can spot-check those spots.
 
 ## Error Handling
 
@@ -211,7 +211,7 @@ List any bilingual fallback chapters by filename so the user can spot-check them
 | pandoc missing | Stop; print `brew install pandoc` |
 | `extract_epub.py` finds no chapters | Abort — likely not a valid EPUB or DRM-protected |
 | A chapter fails to translate | Leave its `${target_lang}/NNN.md` absent so a re-run retries it; note in report |
-| Bilingual block-count mismatch | `interleave.py` falls back to whole-chapter layout; surface in report |
+| Translator merged/split paragraphs | `interleave.py` aligns with difflib and groups those blocks locally; it prints a `NOTE` to stderr — surface in report |
 | md2epub packaging fails | Surface the pandoc error from md2epub |
 
 ## Examples

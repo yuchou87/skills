@@ -98,7 +98,7 @@ epub-translate/
 ## Notes & limitations
 
 - **Cost**: A full book is many chapters; `refined` mode is slow and token-heavy. Test on 1–2 chapters first.
-- **Bilingual alignment**: interleaving pairs paragraphs by block count. When the translator merges/splits paragraphs, that chapter falls back to a clean whole-chapter layout (translation intact, original appended) and is listed in the report.
+- **Bilingual alignment**: interleaving aligns the two chapters with difflib, anchoring on structural blocks (headings, code, figures), so every chapter is interleaved paragraph-by-paragraph. Fenced code blocks stay atomic and figures are de-duplicated. Where the translator merged/split paragraphs, those few blocks are grouped (source run then translation run) and the chapter is listed in the report.
 - **Format fidelity**: pandoc loses complex layout (nested tables, some footnotes). Fine for prose and technical books; not for heavily-designed titles.
 - **DRM**: DRM-protected EPUBs cannot be extracted.
 
@@ -109,12 +109,13 @@ epub-translate/
 | "baoyu-translate not found" | Install the baoyu skills plugin |
 | "no chapters extracted" | Not a valid EPUB, or DRM-protected |
 | Inconsistent term translations | Ensure chapters run sequentially so `EXTEND.md` accumulates |
-| Bilingual chapter looks off | Check the fallback list in the report; that chapter had a paragraph mismatch |
+| Bilingual chapter looks off | Check the grouped-paragraph list in the report; the translator merged/split text there |
 | md2epub errors | Check pandoc: `brew install pandoc` |
 
 ## Version
 
-Current version: **1.0.0**
+Current version: **1.1.0**
 
 Changes:
+- `1.1.0` — Robust bilingual interleave + image paths. `interleave.py` now keeps fenced code blocks atomic (the old blank-line split tore fences that contained internal blank lines, which silently swallowed every following figure), aligns chapters with difflib so paragraph merge/split degrades locally instead of falling back to a whole-chapter layout, and de-duplicates figures. `extract_epub.py` now flattens image references to bare basenames so they resolve against the flat `images/` store (previously `assets/…`-style prefixes broke every figure at packaging time). Verified end-to-end with epubcheck (0 errors, 107 figures) on a real code- and figure-heavy O'Reilly title.
 - `1.0.0` — Initial release: spine-ordered extraction (strips Pandoc styling wrappers — fenced/native divs, heading attributes, and inline-code/link attributes — so Tailwind-style classes don't leak as literal text) + baoyu-translate delegation + md2epub packaging, mono/bilingual layouts, chapter-level resume. Verified end-to-end with epubcheck (0 errors) on a real 46-chapter EPUB, including a real baoyu-translate run on a code-heavy chapter.
