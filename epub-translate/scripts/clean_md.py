@@ -31,10 +31,25 @@ FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 FENCE_BARE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 # A markdown link NOT preceded by '!' (images stay intact). The text may
 # contain escaped brackets (e.g. "[As a \[role\], I want ...]"), so allow
-# backslash escapes inside it rather than stopping at the first ']'.
-LINK = re.compile(r"(?<!\!)\[((?:\\.|[^\]\\])+)\]\(([^)]+)\)")
+# backslash escapes inside it; it may also be empty (e.g. a bare "[](toc.xhtml)"
+# anchor that some TOC exports emit), so allow zero characters too.
+LINK = re.compile(r"(?<!\!)\[((?:\\.|[^\]\\])*)\]\(([^)]+)\)")
 # Pandoc attribute block that begins with an id (#) or class (.).
 ATTR = re.compile(r"[ \t]*\{[#.][^{}]*\}")
+# An image. Its src is a real image only if it is an http(s)/data URI or ends
+# in an image extension; otherwise it's a mangled link (e.g. "![](toc.xhtml#x)"
+# produced when an empty link follows a "!") and gets flattened to its alt text.
+IMG = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+IMG_EXT = re.compile(r"\.(png|jpe?g|gif|svg|webp|bmp|tiff?|avif|ico)$", re.I)
+
+
+def _img_is_real(src: str) -> bool:
+    s = src.strip()
+    return s.startswith(("http://", "https://", "data:")) or bool(IMG_EXT.search(s))
+
+
+def _drop_dead_images(line: str) -> str:
+    return IMG.sub(lambda m: m.group(0) if _img_is_real(m.group(2)) else m.group(1), line)
 
 
 def _is_dead(url: str) -> bool:
@@ -78,7 +93,7 @@ def clean(text: str) -> str:
         if in_fence:
             out.append(line)
         else:
-            out.append(ATTR.sub("", _flatten_links(line)))
+            out.append(ATTR.sub("", _flatten_links(_drop_dead_images(line))))
     return "\n".join(out)
 
 

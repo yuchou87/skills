@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.3.3
+version: 1.3.4
 ---
 
 # EPUB Translation Skill
@@ -28,7 +28,7 @@ SKILL_DIR="${HOME}/.claude/skills/epub-translate"
 |--------|---------|
 | `scripts/extract_epub.py` | Unzip an EPUB into ordered chapter Markdown (spine order) + images + `meta.json` |
 | `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated; table-of-contents pages handled so numbering isn't doubled — flat lists merged per entry, nested lists split into source + translated trees) |
-| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten every dead link (any relative/anchor/`.html` target, plus malformed-host URLs) to plain text and strip Pandoc `{#id .class}` attribute blocks so the EPUB validates (no RSC-007/012/005/020 errors). Real http(s)/mailto links, images, and code are kept |
+| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten every dead link (any relative/anchor/`.html` target, empty-text `[](…)` anchors, malformed-host URLs) to plain text, drop "images" whose src isn't a real image (mangled `![](toc.xhtml#x)`), and strip Pandoc `{#id .class}` attribute blocks so the EPUB validates (no RSC-007/012/005/020 errors). Real http(s)/mailto links, real images, and code are kept |
 
 ## Prerequisites
 

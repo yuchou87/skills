@@ -116,9 +116,10 @@ epub-translate/
 
 ## Version
 
-Current version: **1.3.3**
+Current version: **1.3.4**
 
 Changes:
+- `1.3.4` — More `clean_md.py` link cases from a TOC-heavy Packt title: empty-text anchors (`[](toc.xhtml#x)`, common in exported contents pages) are now flattened too, and an `![](…)` whose src is not a real image — e.g. a mangled `![](Chapter_1.xhtml#h1_30)` produced when an empty link follows a `!` — is dropped to its alt text rather than emitted as a broken image (RSC-007). Real images (image-extension/`http(s)`/`data:` src) are untouched. (One remaining gotcha is not auto-fixed: a heading whose entire content is an image, e.g. `# ![](logo.png)`, breaks the generated nav — give it a text title.)
 - `1.3.3` — `clean_md.py` link flattening hardened on a real, heavily cross-referenced title. It now (1) handles link text containing escaped brackets (e.g. `[As a \[role\], I want …](…)`), (2) flattens `http(s)` URLs with a malformed host that EPUB extraction sometimes emits (e.g. `https://wiki.solidbook.iohref=…`, which epubcheck rejects as RSC-020), and (3) treats *every* non-`http(s)`/`mailto` link as dead — any relative path, `#anchor`, or notion-style slug — since none resolve after repackaging (RSC-007). Real http(s)/mailto links and images are still kept.
 - `1.3.2` — Nested table-of-contents pages. A TOC with its own indented sub-numbering can't be merged per entry without flattening, so it now emits the whole source tree, a divider, then the whole translated tree — a non-list block between them makes Pandoc number each tree independently (no doubling), and the nesting is preserved. Flat TOCs still merge per entry. Without this, the per-block interleave emitted the whole English list then the whole Chinese list and Pandoc numbered them 1..N then N+1..2N.
 - `1.3.1` — Fixed merged-TOC indentation for two-digit list numbers. Continuation lines (translated title, descriptions) are now indented to the marker width instead of a fixed 4 spaces, so entries numbered 10+ no longer fell out of the list item and rendered as indented code (literal `**`, monospace).
