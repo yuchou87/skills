@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.2.0
+version: 1.3.0
 ---
 
 # EPUB Translation Skill
@@ -27,7 +27,7 @@ SKILL_DIR="${HOME}/.claude/skills/epub-translate"
 | Script | Purpose |
 |--------|---------|
 | `scripts/extract_epub.py` | Unzip an EPUB into ordered chapter Markdown (spine order) + images + `meta.json` |
-| `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated) |
+| `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated; table-of-contents pages merged so numbering isn't doubled) |
 | `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten dead cross-reference links and strip Pandoc `{#id .class}` attribute blocks so the EPUB validates (no RSC-007/012/005 errors) |
 
 ## Prerequisites
@@ -160,6 +160,8 @@ done
 ```
 
 `interleave.py` aligns the two chapters with difflib, so every chapter is interleaved paragraph-by-paragraph (no whole-chapter fallback). Where the translator merged or split paragraphs, those few blocks are emitted as a grouped source-run-then-translation-run and the script prints a `NOTE: NNN.md aligned with N grouped paragraph region(s)` to stderr — collect these for the report so the user can spot-check those spots.
+
+A page that is essentially one big top-level **ordered list** (a table of contents) is detected and handled specially: each entry is merged with its translation into a single numbered list item (source title, then translated title, then any descriptions). Otherwise Pandoc renumbers the doubled EN/ZH items sequentially and the chapter numbering runs together (1,2,3,4 for two entries).
 
 ### Step 4b: Clean the assembled Markdown (both layouts)
 

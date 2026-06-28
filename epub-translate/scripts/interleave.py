@@ -42,6 +42,7 @@ FENCE_OPEN = re.compile(r"^\s*(`{3,}|~{3,})")
 FENCE_BARE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 IMG_LINE = re.compile(r"^\s*!\[[^\]]*\]\([^)]+\)\s*$")
 IMG_URL = re.compile(r"\]\(([^)]+)\)")
+ORDERED_ITEM = re.compile(r"^\d+\.\s+(.*)$")  # top-level numbered list item
 
 
 def split_blocks(text: str) -> list[str]:
@@ -168,13 +169,105 @@ def interleave(src: list[str], zh: list[str]) -> tuple[list[str], int]:
     return out, diff_regions
 
 
+# --- Table-of-contents / ordered-list pages -------------------------------
+# A TOC is a long top-level ordered list. The default per-block interleave
+# emits the source item then the translated item, so Pandoc renumbers the list
+# sequentially and the numbering DOUBLES (1,2,3,4 for two entries). For a page
+# that is essentially one big numbered list we instead merge each entry with
+# its translation into a SINGLE list item, so the list numbers once per entry.
+
+
+def _parse_entries(text: str):
+    """Split a TOC-like page into (preamble_lines, entries).
+
+    An entry begins at a top-level ``N.`` line; following blank/indented lines
+    (sub-titles, one-line descriptions) belong to it until the next ``N.``.
+    """
+    lines = text.replace("\r\n", "\n").split("\n")
+    i = 0
+    preamble: list[str] = []
+    while i < len(lines) and not ORDERED_ITEM.match(lines[i]):
+        preamble.append(lines[i])
+        i += 1
+    entries: list[dict] = []
+    cur: dict | None = None
+    for ln in lines[i:]:
+        m = ORDERED_ITEM.match(ln)
+        if m:
+            if cur is not None:
+                entries.append(cur)
+            cur = {"title": m.group(1).strip(), "rest": []}
+        elif cur is not None and ln.strip():
+            cur["rest"].append(ln.strip())
+    if cur is not None:
+        entries.append(cur)
+    return preamble, entries
+
+
+def _looks_like_toc(text: str) -> bool:
+    """True when the page is essentially one big top-level ordered list.
+
+    Requires at least 8 numbered items and that ~all non-blank body lines are
+    either numbered items or their indented continuations — so prose chapters
+    that merely contain a short list never qualify.
+    """
+    lines = text.replace("\r\n", "\n").split("\n")
+    body, seen_heading = [], False
+    for ln in lines:
+        if not seen_heading and is_heading(ln):
+            seen_heading = True
+            continue
+        if ln.strip():
+            body.append(ln)
+    if not body:
+        return False
+    numbered = sum(1 for ln in body if ORDERED_ITEM.match(ln))
+    in_list = sum(1 for ln in body if ORDERED_ITEM.match(ln) or ln[:1].isspace())
+    return numbered >= 8 and in_list / len(body) >= 0.9
+
+
+def _merge_toc(src_text: str, zh_text: str):
+    """Merge a TOC source and translation into one bilingual numbered list.
+
+    Returns the parts list, or None if the entry counts differ (caller then
+    falls back to the normal interleave).
+    """
+    _, s_entries = _parse_entries(src_text)
+    zh_preamble, z_entries = _parse_entries(zh_text)
+    if len(s_entries) != len(z_entries) or not s_entries:
+        return None
+    parts: list[str] = []
+    head = "\n".join(zh_preamble).strip()  # translated heading, if any
+    if head:
+        parts.append(head)
+    for n, (se, ze) in enumerate(zip(s_entries, z_entries), start=1):
+        body = [f"{n}.  {se['title']}", "", f"    {ze['title']}"]
+        sd, zd = se["rest"], ze["rest"]
+        for k in range(max(len(sd), len(zd))):  # pair descriptions EN then ZH
+            if k < len(sd):
+                body += ["", f"    {sd[k]}"]
+            if k < len(zd):
+                body += ["", f"    {zd[k]}"]
+        parts.append("\n".join(body))
+    return parts
+
+
 def main() -> None:
     if len(sys.argv) != 4:
         sys.exit("usage: interleave.py <source.md> <translated.md> <output.md>")
-    src = split_blocks(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    zh = split_blocks(Path(sys.argv[2]).read_text(encoding="utf-8"))
+    src_text = Path(sys.argv[1]).read_text(encoding="utf-8")
+    zh_text = Path(sys.argv[2]).read_text(encoding="utf-8")
     out_path = Path(sys.argv[3])
 
+    # TOC pages: merge each entry so the list numbers once per entry.
+    if _looks_like_toc(src_text):
+        parts = _merge_toc(src_text, zh_text)
+        if parts is not None:
+            out_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
+            return
+
+    src = split_blocks(src_text)
+    zh = split_blocks(zh_text)
     parts, diff_regions = interleave(src, zh)
     if diff_regions:
         print(
