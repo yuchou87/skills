@@ -29,6 +29,13 @@ from pathlib import Path
 
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 FENCE_BARE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
+# A heading with no text (e.g. "# " or "###"). EPUB extraction sometimes emits
+# these; Pandoc turns them into empty nav entries, so drop the line entirely.
+EMPTY_HEADING = re.compile(r"^#{1,6}\s*$")
+# A heading whose entire content is an image (e.g. "## ![](image33.png)"). Pandoc
+# puts it in the nav TOC but the nav can't reference the image -> broken resource,
+# so demote it to a plain image paragraph (drop the heading marker).
+IMG_HEADING = re.compile(r"^#{1,6}\s+(!\[[^\]]*\]\([^)]+\))\s*$")
 # A markdown link NOT preceded by '!' (images stay intact). The text may
 # contain escaped brackets (e.g. "[As a \[role\], I want ...]"), so allow
 # backslash escapes inside it; it may also be empty (e.g. a bare "[](toc.xhtml)"
@@ -92,8 +99,13 @@ def clean(text: str) -> str:
             continue
         if in_fence:
             out.append(line)
-        else:
-            out.append(ATTR.sub("", _flatten_links(_drop_dead_images(line))))
+            continue
+        if EMPTY_HEADING.match(line):
+            continue  # drop empty heading lines (would become empty nav entries)
+        mh = IMG_HEADING.match(line)
+        if mh:
+            line = mh.group(1)  # demote image-only heading to a plain image
+        out.append(ATTR.sub("", _flatten_links(_drop_dead_images(line))))
     return "\n".join(out)
 
 
