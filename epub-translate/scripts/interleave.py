@@ -204,6 +204,43 @@ def _parse_entries(text: str):
     return preamble, entries
 
 
+NESTED_ITEM = re.compile(r"^\s+\d+\.\s")  # an indented (sub-list) ordered item
+
+
+def _is_nested_toc(text: str) -> bool:
+    """A TOC with indented numbered sub-items (its own sub-numbering)."""
+    return any(NESTED_ITEM.match(ln) for ln in text.replace("\r\n", "\n").split("\n"))
+
+
+def _split_lists(src_text: str, zh_text: str):
+    """Bilingual layout for a NESTED table of contents.
+
+    A nested list can't be merged entry-by-entry without flattening its
+    sub-numbering, so emit the whole source list, a divider, then the whole
+    translated list. A non-list block between them makes Pandoc treat them as
+    two separate lists, so each numbers independently (no doubling) and the
+    nesting is preserved on both sides.
+    """
+    def split_head(text):
+        lines = text.replace("\r\n", "\n").split("\n")
+        i = 0
+        while i < len(lines) and not ORDERED_ITEM.match(lines[i]):
+            i += 1
+        return "\n".join(lines[:i]).strip(), "\n".join(lines[i:]).strip()
+
+    _, src_body = split_head(src_text)
+    zh_head, zh_body = split_head(zh_text)
+    parts = []
+    if zh_head:
+        parts.append(zh_head)
+    if src_body:
+        parts.append(src_body)
+    parts.append("------")  # thematic break: separates the two lists
+    if zh_body:
+        parts.append(zh_body)
+    return parts
+
+
 def _looks_like_toc(text: str) -> bool:
     """True when the page is essentially one big top-level ordered list.
 
@@ -265,9 +302,14 @@ def main() -> None:
     zh_text = Path(sys.argv[2]).read_text(encoding="utf-8")
     out_path = Path(sys.argv[3])
 
-    # TOC pages: merge each entry so the list numbers once per entry.
+    # TOC pages: avoid Pandoc renumbering the doubled EN/ZH list.
     if _looks_like_toc(src_text):
-        parts = _merge_toc(src_text, zh_text)
+        if _is_nested_toc(src_text):
+            # nested list -> source tree, divider, translated tree
+            parts = _split_lists(src_text, zh_text)
+        else:
+            # flat list -> merge each entry (source title then translation)
+            parts = _merge_toc(src_text, zh_text)
         if parts is not None:
             out_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
             return

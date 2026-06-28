@@ -116,9 +116,10 @@ epub-translate/
 
 ## Version
 
-Current version: **1.3.1**
+Current version: **1.3.2**
 
 Changes:
+- `1.3.2` — Nested table-of-contents pages. A TOC with its own indented sub-numbering can't be merged per entry without flattening, so it now emits the whole source tree, a divider, then the whole translated tree — a non-list block between them makes Pandoc number each tree independently (no doubling), and the nesting is preserved. Flat TOCs still merge per entry. Without this, the per-block interleave emitted the whole English list then the whole Chinese list and Pandoc numbered them 1..N then N+1..2N.
 - `1.3.1` — Fixed merged-TOC indentation for two-digit list numbers. Continuation lines (translated title, descriptions) are now indented to the marker width instead of a fixed 4 spaces, so entries numbered 10+ no longer fell out of the list item and rendered as indented code (literal `**`, monospace).
 - `1.3.0` — `interleave.py` now detects table-of-contents pages (a page that is essentially one big top-level ordered list) and merges each entry with its translation into a single numbered list item. Without this, the per-block interleave emitted the source item then the translated item, and Pandoc renumbered the doubled list sequentially, so chapter numbering ran together (1,2,3,4 for two entries). Prose chapters that merely contain a short list are unaffected (detection requires ≥8 numbered items and ~all body lines inside the list). Verified on a real No Starch math title whose brief/detailed contents pages were doubling.
 - `1.2.0` — New `clean_md.py` packaging pass (Step 4b) flattens dead cross-reference links (`chNN.html`, `#anchor`) and strips Pandoc `{#id .class}` attribute blocks, eliminating the RSC-007/012 (missing resource / bad fragment) and RSC-005 (duplicate-ID, from bilingual-interleaved table captions) errors that epubcheck otherwise reports. It skips fenced code so code text and fence info strings are untouched, and is idempotent. Mono layout now assembles into a fresh `mono/` dir instead of packaging straight from the resume cache. Verified end-to-end with epubcheck (0 errors) on a real O'Reilly title with cross-references and id-tagged appendix tables.
