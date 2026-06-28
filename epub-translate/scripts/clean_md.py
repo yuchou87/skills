@@ -29,21 +29,32 @@ from pathlib import Path
 
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 FENCE_BARE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
-# A markdown link NOT preceded by '!' (images stay intact).
-LINK = re.compile(r"(?<!\!)\[([^\]]+)\]\(([^)]+)\)")
+# A markdown link NOT preceded by '!' (images stay intact). The text may
+# contain escaped brackets (e.g. "[As a \[role\], I want ...]"), so allow
+# backslash escapes inside it rather than stopping at the first ']'.
+LINK = re.compile(r"(?<!\!)\[((?:\\.|[^\]\\])+)\]\(([^)]+)\)")
 # Pandoc attribute block that begins with an id (#) or class (.).
 ATTR = re.compile(r"[ \t]*\{[#.][^{}]*\}")
 
 
 def _is_dead(url: str) -> bool:
     u = url.strip()
-    if u.startswith(("http://", "https://", "mailto:")):
+    if u.startswith(("http://", "https://")):
+        # Flatten URLs with a malformed host that epubcheck (RSC-020) rejects.
+        # EPUB extraction sometimes mangles internal links into forms like
+        # "https://wiki.solidbook.iohref=..." (domain fused with an href).
+        host = re.sub(r"^https?://", "", u).split("/")[0].split("?")[0].split("#")[0]
+        if any(ch in host for ch in "=& \t") or any(len(lbl) > 63 for lbl in host.split(".")):
+            return True
         return False
-    if u.startswith("#"):
-        return True
-    if re.search(r"\.x?html(\#|$)", u):
-        return True
-    return False
+    if u.startswith("mailto:"):
+        return False
+    # Anything else is a relative/in-page reference. After repackaging into a
+    # single new EPUB, no source-relative target survives (chapter files were
+    # renamed, custom #anchors and notion-style slug links don't resolve), and
+    # images use the `![]()` syntax which this LINK regex already excludes. So
+    # treat every remaining relative link as dead and flatten it to plain text.
+    return True
 
 
 def _flatten_links(line: str) -> str:

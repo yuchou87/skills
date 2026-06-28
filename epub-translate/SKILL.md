@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.3.2
+version: 1.3.3
 ---
 
 # EPUB Translation Skill
@@ -28,7 +28,7 @@ SKILL_DIR="${HOME}/.claude/skills/epub-translate"
 |--------|---------|
 | `scripts/extract_epub.py` | Unzip an EPUB into ordered chapter Markdown (spine order) + images + `meta.json` |
 | `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated; table-of-contents pages handled so numbering isn't doubled — flat lists merged per entry, nested lists split into source + translated trees) |
-| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten dead cross-reference links and strip Pandoc `{#id .class}` attribute blocks so the EPUB validates (no RSC-007/012/005 errors) |
+| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten every dead link (any relative/anchor/`.html` target, plus malformed-host URLs) to plain text and strip Pandoc `{#id .class}` attribute blocks so the EPUB validates (no RSC-007/012/005/020 errors). Real http(s)/mailto links, images, and code are kept |
 
 ## Prerequisites
 
@@ -166,11 +166,14 @@ A page that is essentially one big top-level **ordered list** (a table of conten
 ### Step 4b: Clean the assembled Markdown (both layouts)
 
 Run `clean_md.py` over the `PACK_DIR` so the repackaged EPUB validates. It
-flattens dead cross-reference links (the source's `chNN.html` / `#anchor`
-targets don't exist in the new book → RSC-007/RSC-012 errors) and strips Pandoc
+flattens every dead link to plain text — any relative target, `#anchor`, or
+`.html` reference (none survive repackaging → RSC-007/RSC-012), plus URLs with a
+malformed host that EPUB extraction sometimes produces, e.g.
+`https://wiki.solidbook.iohref=…` (→ RSC-020) — and strips Pandoc
 `{#id .class}` attribute blocks (which duplicate across the two languages in a
-bilingual interleave → RSC-005 duplicate-ID errors). Real URLs, images, code
-blocks, and fence info strings are left untouched; the pass is idempotent.
+bilingual interleave → RSC-005 duplicate-ID errors). Real http(s)/mailto links,
+images, code blocks, and fence info strings are left untouched; link text may
+contain escaped brackets; the pass is idempotent.
 
 ```bash
 python3 "${SKILL_DIR}/scripts/clean_md.py" "${PACK_DIR}"/*.md

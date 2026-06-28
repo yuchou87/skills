@@ -116,9 +116,10 @@ epub-translate/
 
 ## Version
 
-Current version: **1.3.2**
+Current version: **1.3.3**
 
 Changes:
+- `1.3.3` — `clean_md.py` link flattening hardened on a real, heavily cross-referenced title. It now (1) handles link text containing escaped brackets (e.g. `[As a \[role\], I want …](…)`), (2) flattens `http(s)` URLs with a malformed host that EPUB extraction sometimes emits (e.g. `https://wiki.solidbook.iohref=…`, which epubcheck rejects as RSC-020), and (3) treats *every* non-`http(s)`/`mailto` link as dead — any relative path, `#anchor`, or notion-style slug — since none resolve after repackaging (RSC-007). Real http(s)/mailto links and images are still kept.
 - `1.3.2` — Nested table-of-contents pages. A TOC with its own indented sub-numbering can't be merged per entry without flattening, so it now emits the whole source tree, a divider, then the whole translated tree — a non-list block between them makes Pandoc number each tree independently (no doubling), and the nesting is preserved. Flat TOCs still merge per entry. Without this, the per-block interleave emitted the whole English list then the whole Chinese list and Pandoc numbered them 1..N then N+1..2N.
 - `1.3.1` — Fixed merged-TOC indentation for two-digit list numbers. Continuation lines (translated title, descriptions) are now indented to the marker width instead of a fixed 4 spaces, so entries numbered 10+ no longer fell out of the list item and rendered as indented code (literal `**`, monospace).
 - `1.3.0` — `interleave.py` now detects table-of-contents pages (a page that is essentially one big top-level ordered list) and merges each entry with its translation into a single numbered list item. Without this, the per-block interleave emitted the source item then the translated item, and Pandoc renumbered the doubled list sequentially, so chapter numbering ran together (1,2,3,4 for two entries). Prose chapters that merely contain a short list are unaffected (detection requires ≥8 numbered items and ~all body lines inside the list). Verified on a real No Starch math title whose brief/detailed contents pages were doubling.
