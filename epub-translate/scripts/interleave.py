@@ -241,13 +241,19 @@ def _merge_toc(src_text: str, zh_text: str):
     if head:
         parts.append(head)
     for n, (se, ze) in enumerate(zip(s_entries, z_entries), start=1):
-        body = [f"{n}.  {se['title']}", "", f"    {ze['title']}"]
+        # Continuation lines must be indented to the list item's content column,
+        # which is the marker width. A fixed 4-space indent breaks for two-digit
+        # numbers (e.g. "10. " is 4 wide -> a 4-space continuation is fine, but
+        # "10.  " content sits at column 5), so derive the indent from the marker.
+        marker = f"{n}. "
+        indent = " " * len(marker)
+        body = [f"{marker}{se['title']}", "", f"{indent}{ze['title']}"]
         sd, zd = se["rest"], ze["rest"]
         for k in range(max(len(sd), len(zd))):  # pair descriptions EN then ZH
             if k < len(sd):
-                body += ["", f"    {sd[k]}"]
+                body += ["", f"{indent}{sd[k]}"]
             if k < len(zd):
-                body += ["", f"    {zd[k]}"]
+                body += ["", f"{indent}{zd[k]}"]
         parts.append("\n".join(body))
     return parts
 

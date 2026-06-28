@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.3.0
+version: 1.3.1
 ---
 
 # EPUB Translation Skill
