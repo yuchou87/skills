@@ -126,6 +126,20 @@ def sig(block: str):
     return "p"
 
 
+INLINE_IMG = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+
+
+def _strip_shared_inline_images(z: str, s: str) -> str:
+    """Drop inline images from the translated block whose path already appears
+    in the source block. Head First-style bullets carry a decorative number
+    icon inline (e.g. `- ![](f0004.png) **...**`); without this the icon shows
+    twice — once on the source line, once on the translation right below it."""
+    src_paths = set(INLINE_IMG.findall(s))
+    if not src_paths:
+        return z
+    return INLINE_IMG.sub(lambda m: "" if m.group(1) in src_paths else m.group(0), z)
+
+
 def _emit_pair(s: str, z: str, out: list[str]) -> None:
     if is_code(s) or is_code(z):
         out.append(z if is_code(z) else s)
@@ -135,7 +149,7 @@ def _emit_pair(s: str, z: str, out: list[str]) -> None:
         out.append(z if is_heading(z) else s)
     else:
         out.append(s)
-        out.append(z)
+        out.append(_strip_shared_inline_images(z, s))
 
 
 def interleave(src: list[str], zh: list[str]) -> tuple[list[str], int]:
