@@ -32,6 +32,8 @@ FENCE_BARE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 # A heading with no text (e.g. "# " or "###"). EPUB extraction sometimes emits
 # these; Pandoc turns them into empty nav entries, so drop the line entirely.
 EMPTY_HEADING = re.compile(r"^#{1,6}\s*$")
+# Any ATX heading, capturing its level and the rest of the line.
+HEADING = re.compile(r"^(#{1,6})(\s.*)$")
 # A heading whose entire content is an image (e.g. "## ![](image33.png)"). Pandoc
 # puts it in the nav TOC but the nav can't reference the image -> broken resource,
 # so demote it to a plain image paragraph (drop the heading marker).
@@ -83,11 +85,32 @@ def _flatten_links(line: str) -> str:
     return LINK.sub(lambda m: m.group(1) if _is_dead(m.group(2)) else m.group(0), line)
 
 
+def _count_h1(lines: list[str]) -> int:
+    n, in_fence, fch = 0, False, ""
+    for line in lines:
+        m = FENCE.match(line)
+        if m:
+            c = m.group(1)[0]
+            if not in_fence:
+                in_fence, fch = True, c
+            elif c == fch and FENCE_BARE.match(line):
+                in_fence = False
+            continue
+        if not in_fence and re.match(r"^#\s", line):
+            n += 1
+    return n
+
+
 def clean(text: str) -> str:
+    lines_all = text.replace("\r\n", "\n").split("\n")
+    # Only collapse multi-H1 files: a file with one H1 already has the right
+    # shape, so its existing H2/H3 must be left alone.
+    demote_extra = _count_h1(lines_all) > 1
     out: list[str] = []
     in_fence = False
     fence_char = ""
-    for line in text.replace("\r\n", "\n").split("\n"):
+    seen_first_h1 = False
+    for line in lines_all:
         m = FENCE.match(line)
         if m:
             c = m.group(1)[0]
@@ -105,6 +128,19 @@ def clean(text: str) -> str:
         mh = IMG_HEADING.match(line)
         if mh:
             line = mh.group(1)  # demote image-only heading to a plain image
+        else:
+            # One spine chapter == one source file == one H1. Sources that use
+            # "#" for every section (e.g. Head First books) otherwise make
+            # --split-level=1 explode into hundreds of tiny, fragmented pages.
+            # Keep the file's first H1 (the chapter title) and demote every
+            # later heading by one level, preserving the relative hierarchy.
+            hm = HEADING.match(line) if demote_extra else None
+            if hm:
+                level, rest = hm.group(1), hm.group(2)
+                if len(level) == 1 and not seen_first_h1:
+                    seen_first_h1 = True
+                else:
+                    line = "#" * min(len(level) + 1, 6) + rest
         out.append(ATTR.sub("", _flatten_links(_drop_dead_images(line))))
     return "\n".join(out)
 

@@ -116,9 +116,10 @@ epub-translate/
 
 ## Version
 
-Current version: **1.3.5**
+Current version: **1.3.6**
 
 Changes:
+- `1.3.6` — `clean_md.py` now collapses multi-H1 chapter files to a single H1. Sources that use `#` for every section (e.g. Head First titles) otherwise made `--split-level=1` explode one chapter into hundreds of tiny spine files — a fragmented, mostly-blank-looking read (one real book became 521 spine items instead of ~21). The first H1 (chapter title) is kept and every later heading is demoted one level, preserving the hierarchy; single-H1 files are untouched. Surfaced on *Head First Software Architecture* (1,097 images, ~520 stray H1s).
 - `1.3.5` — `clean_md.py` now also removes empty headings (`# ` with no text) and demotes image-only headings (`## ![](image.png)`) to plain image paragraphs. Both are EPUB-extraction artifacts that Pandoc turns into broken/empty nav entries (a missing `media/fileN.png` RSC-007 for the image case). Surfaced on a 75-chapter "laws" title with many short chapters. Code-fenced `#` lines are untouched.
 - `1.3.4` — More `clean_md.py` link cases from a TOC-heavy Packt title: empty-text anchors (`[](toc.xhtml#x)`, common in exported contents pages) are now flattened too, and an `![](…)` whose src is not a real image — e.g. a mangled `![](Chapter_1.xhtml#h1_30)` produced when an empty link follows a `!` — is dropped to its alt text rather than emitted as a broken image (RSC-007). Real images (image-extension/`http(s)`/`data:` src) are untouched. (One remaining gotcha is not auto-fixed: a heading whose entire content is an image, e.g. `# ![](logo.png)`, breaks the generated nav — give it a text title.)
 - `1.3.3` — `clean_md.py` link flattening hardened on a real, heavily cross-referenced title. It now (1) handles link text containing escaped brackets (e.g. `[As a \[role\], I want …](…)`), (2) flattens `http(s)` URLs with a malformed host that EPUB extraction sometimes emits (e.g. `https://wiki.solidbook.iohref=…`, which epubcheck rejects as RSC-020), and (3) treats *every* non-`http(s)`/`mailto` link as dead — any relative path, `#anchor`, or notion-style slug — since none resolve after repackaging (RSC-007). Real http(s)/mailto links and images are still kept.
