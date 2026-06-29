@@ -147,6 +147,8 @@ def _emit_pair(s: str, z: str, out: list[str]) -> None:
         out.append(s if is_image_only(s) else z)
     elif is_heading(s):
         out.append(z if is_heading(z) else s)
+    elif s.strip() == z.strip():
+        out.append(s)  # untranslated (proper names, etc.) — don't show twice
     else:
         out.append(s)
         out.append(_strip_shared_inline_images(z, s))

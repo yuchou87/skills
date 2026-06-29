@@ -116,9 +116,10 @@ epub-translate/
 
 ## Version
 
-Current version: **1.3.7**
+Current version: **1.3.8**
 
 Changes:
+- `1.3.8` — `interleave.py` emits a paragraph only once when its source and translation are identical. Untranslated lines (proper names, a list of book titles, etc.) otherwise appeared twice in the bilingual output. Headings and genuinely-translated paragraphs are still shown in both languages.
 - `1.3.7` — `interleave.py` drops inline images from the translation copy of a paragraph when the same image already appears in the source copy. Head First-style bullets carry a decorative number icon inline (`- ![](icon.png) **...**`); without this the icon rendered twice per bullet — once on the English line, once on the Chinese line right below. Block-level figures (handled separately) and translation-only images are unaffected.
 - `1.3.6` — `clean_md.py` now collapses multi-H1 chapter files to a single H1. Sources that use `#` for every section (e.g. Head First titles) otherwise made `--split-level=1` explode one chapter into hundreds of tiny spine files — a fragmented, mostly-blank-looking read (one real book became 521 spine items instead of ~21). The first H1 (chapter title) is kept and every later heading is demoted one level, preserving the hierarchy; single-H1 files are untouched. Surfaced on *Head First Software Architecture* (1,097 images, ~520 stray H1s).
 - `1.3.5` — `clean_md.py` now also removes empty headings (`# ` with no text) and demotes image-only headings (`## ![](image.png)`) to plain image paragraphs. Both are EPUB-extraction artifacts that Pandoc turns into broken/empty nav entries (a missing `media/fileN.png` RSC-007 for the image case). Surfaced on a 75-chapter "laws" title with many short chapters. Code-fenced `#` lines are untouched.
