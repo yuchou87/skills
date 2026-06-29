@@ -140,6 +140,9 @@ def _strip_shared_inline_images(z: str, s: str) -> str:
     return INLINE_IMG.sub(lambda m: "" if m.group(1) in src_paths else m.group(0), z)
 
 
+LIST_ITEM_FULL = re.compile(r"^(\s*)(\d+\.|[-*+])(\s+)(.*)$")
+
+
 def _emit_pair(s: str, z: str, out: list[str]) -> None:
     if is_code(s) or is_code(z):
         out.append(z if is_code(z) else s)
@@ -150,8 +153,20 @@ def _emit_pair(s: str, z: str, out: list[str]) -> None:
     elif s.strip() == z.strip():
         out.append(s)  # untranslated (proper names, etc.) — don't show twice
     else:
-        out.append(s)
-        out.append(_strip_shared_inline_images(z, s))
+        sm = LIST_ITEM_FULL.match(s)
+        zm = LIST_ITEM_FULL.match(z)
+        if sm and zm and "\n" not in s.strip() and "\n" not in z.strip():
+            # Single-line list items: emit the source bullet, then the
+            # translation as an indented continuation under the SAME bullet —
+            # so the translation doesn't get its own stray marker. Inline icons
+            # shared with the source (checkboxes, number glyphs) are dropped.
+            out.append(s)
+            indent = " " * (len(sm.group(1)) + len(sm.group(2)) + len(sm.group(3)))
+            z_text = _strip_shared_inline_images(zm.group(4), s).strip()
+            out.append(indent + z_text)
+        else:
+            out.append(s)
+            out.append(_strip_shared_inline_images(z, s))
 
 
 def interleave(src: list[str], zh: list[str]) -> tuple[list[str], int]:
