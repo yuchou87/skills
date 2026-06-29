@@ -45,20 +45,44 @@ IMG_HEADING = re.compile(r"^#{1,6}\s+(!\[[^\]]*\]\([^)]+\))\s*$")
 LINK = re.compile(r"(?<!\!)\[((?:\\.|[^\]\\])*)\]\(([^)]+)\)")
 # Pandoc attribute block that begins with an id (#) or class (.).
 ATTR = re.compile(r"[ \t]*\{[#.][^{}]*\}")
-# An image. Its src is a real image only if it is an http(s)/data URI or ends
-# in an image extension; otherwise it's a mangled link (e.g. "![](toc.xhtml#x)"
-# produced when an empty link follows a "!") and gets flattened to its alt text.
+# An image. Its src is a real image only if it is a data: URI or ends in an
+# image extension (local OR remote). A src with no image extension — a mangled
+# link like "![](toc.xhtml#x)", or a remote page URL like
+# "![](https://shop/product/123)" — is flattened to its alt text. A real local
+# image carrying a directory prefix is rewritten to its bare basename, since
+# images are always stored flat (matches older work dirs that predate that fix).
 IMG = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 IMG_EXT = re.compile(r"\.(png|jpe?g|gif|svg|webp|bmp|tiff?|avif|ico)$", re.I)
 
 
 def _img_is_real(src: str) -> bool:
     s = src.strip()
-    return s.startswith(("http://", "https://", "data:")) or bool(IMG_EXT.search(s))
+    return s.startswith("data:") or bool(IMG_EXT.search(s))
+
+
+def _fix_image(m: "re.Match[str]") -> str:
+    alt, src = m.group(1), m.group(2)
+    s = src.strip()
+    if not _img_is_real(s):
+        return alt  # not a real image -> flatten to alt text
+    if not s.startswith(("http://", "https://", "data:")) and "/" in s:
+        return f"![{alt}]({s.rsplit('/', 1)[-1]})"  # local path -> basename
+    return m.group(0)
 
 
 def _drop_dead_images(line: str) -> str:
-    return IMG.sub(lambda m: m.group(0) if _img_is_real(m.group(2)) else m.group(1), line)
+    return IMG.sub(_fix_image, line)
+
+
+# A linked image: [![alt](imgsrc)](linkurl) — common for cover thumbnails that
+# link to a store page. The generic link/image regexes would mis-parse the
+# nesting and mangle it into a broken "![](linkurl)" remote image, so unwrap it
+# to just the image first (the external link wrapper adds little in a book).
+LINKED_IMG = re.compile(r"\[(!\[[^\]]*\]\([^)]+\))\]\([^)]+\)")
+
+
+def _unwrap_linked_images(line: str) -> str:
+    return LINKED_IMG.sub(lambda m: m.group(1), line)
 
 
 def _is_dead(url: str) -> bool:
@@ -141,7 +165,7 @@ def clean(text: str) -> str:
                     seen_first_h1 = True
                 else:
                     line = "#" * min(len(level) + 1, 6) + rest
-        out.append(ATTR.sub("", _flatten_links(_drop_dead_images(line))))
+        out.append(ATTR.sub("", _flatten_links(_drop_dead_images(_unwrap_linked_images(line)))))
     return "\n".join(out)
 
 

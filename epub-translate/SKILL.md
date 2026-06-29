@@ -9,7 +9,7 @@ description: >
   Trigger keywords: "translate epub", "translate ebook", "epub translation",
   "翻译 epub", "翻译电子书", "epub 翻译", "把这本 epub 翻译成中文",
   "translate this book to chinese", "bilingual epub"
-version: 1.3.10
+version: 1.3.11
 ---
 
 # EPUB Translation Skill
@@ -28,7 +28,7 @@ SKILL_DIR="${HOME}/.claude/skills/epub-translate"
 |--------|---------|
 | `scripts/extract_epub.py` | Unzip an EPUB into ordered chapter Markdown (spine order) + images + `meta.json` |
 | `scripts/interleave.py` | Merge a source chapter and its translation into one bilingual chapter (difflib-aligned: code blocks kept atomic, structural blocks anchored, figures de-duplicated, inline icon images dropped from the translation copy so they don't show twice, a paragraph identical in both languages emitted once, and for list items the translation emitted as an indented continuation of the source bullet (no stray second marker / no Pandoc renumbering); table-of-contents pages handled so the EN/ZH list isn't doubled — ordered OR bulleted; flat numbered lists merged per entry, nested/bulleted trees split into source + translated trees) |
-| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten every dead link (relative/anchor/`.html`, empty-text `[](…)`, malformed-host URLs) to plain text, drop "images" whose src isn't a real image, remove empty headings and demote image-only headings, collapse multi-H1 files to a single H1 (keep the chapter title, demote the rest — so a source that uses `#` per section doesn't explode `--split-level=1` into hundreds of fragmented pages), and strip Pandoc `{#id .class}` blocks so the EPUB validates (no RSC-007/012/005/020 errors). Real http(s)/mailto links, real images, and code are kept |
+| `scripts/clean_md.py` | Clean assembled Markdown before packaging — flatten every dead link (relative/anchor/`.html`, empty-text `[](…)`, malformed-host URLs) to plain text, unwrap linked images `[![](img)](url)` to just the image, drop "images" whose src isn't a real image (mangled or remote page URL), rewrite local image paths to bare basenames (matches the flat `images/` store, incl. older `assets/…` work dirs), remove empty headings and demote image-only headings, collapse multi-H1 files to a single H1 (keep the chapter title, demote the rest — so a source that uses `#` per section doesn't explode `--split-level=1` into hundreds of fragmented pages), and strip Pandoc `{#id .class}` blocks so the EPUB validates (no RSC-007/012/005/020 errors). Real http(s)/mailto links, real images, and code are kept |
 
 ## Prerequisites
 

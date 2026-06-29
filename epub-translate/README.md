@@ -116,9 +116,10 @@ epub-translate/
 
 ## Version
 
-Current version: **1.3.10**
+Current version: **1.3.11**
 
 Changes:
+- `1.3.11` — `clean_md.py` image hardening, surfaced re-packaging older books. It now unwraps linked images `[![](cover.jpg)](https://store/page)` to just the image (the generic regexes used to mis-parse the nesting into a broken `![](store-url)` remote image → RSC-007), treats a remote `http(s)` image src with no image extension as not-an-image (dropped), and rewrites any local image path to its bare basename so older work dirs that still reference `assets/…` resolve against the flat `images/` store. The repack helper also drops image refs whose file is absent (source-missing figures). All 12 previously-translated books re-packaged at 0 errors.
 - `1.3.10` — In a bilingual list, the translation of each item is now emitted as an indented continuation of the source bullet rather than its own list item. Previously every bullet pair produced two markers (`• EN` then `• ZH` — the Chinese line a bare bullet once its shared checkbox/icon was de-duped), and numbered lists even got renumbered (1,2 for one item). Now each item is one marker with EN then ZH stacked beneath it.
 - `1.3.9` — TOC detection now covers **bulleted** tables of contents, not just numbered ones. A nested `-`/`*` contents list (e.g. Head First's detailed TOC) was previously interleaved entry-by-entry, doubling every `○` bullet (English item then Chinese item). It's now recognized as a TOC and emitted as source tree + divider + translated tree.
 - `1.3.8` — `interleave.py` emits a paragraph only once when its source and translation are identical. Untranslated lines (proper names, a list of book titles, etc.) otherwise appeared twice in the bilingual output. Headings and genuinely-translated paragraphs are still shown in both languages.
