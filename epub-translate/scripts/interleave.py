@@ -220,19 +220,20 @@ def _parse_entries(text: str):
     return preamble, entries
 
 
-NESTED_ITEM = re.compile(r"^\s+\d+\.\s")  # an indented (sub-list) ordered item
+LIST_ITEM = re.compile(r"^\s*(?:\d+\.|[-*+])\s")       # ordered or bullet, any indent
+NESTED_ITEM = re.compile(r"^\s+(?:\d+\.|[-*+])\s")     # an indented (sub-list) item
 
 
 def _is_nested_toc(text: str) -> bool:
-    """A TOC with indented numbered sub-items (its own sub-numbering)."""
+    """A TOC with indented sub-items (numbered or bulleted) — i.e. a tree."""
     return any(NESTED_ITEM.match(ln) for ln in text.replace("\r\n", "\n").split("\n"))
 
 
 def _split_lists(src_text: str, zh_text: str):
-    """Bilingual layout for a NESTED table of contents.
+    """Bilingual layout for a NESTED table of contents (numbered or bulleted).
 
     A nested list can't be merged entry-by-entry without flattening its
-    sub-numbering, so emit the whole source list, a divider, then the whole
+    structure, so emit the whole source list, a divider, then the whole
     translated list. A non-list block between them makes Pandoc treat them as
     two separate lists, so each numbers independently (no doubling) and the
     nesting is preserved on both sides.
@@ -240,7 +241,7 @@ def _split_lists(src_text: str, zh_text: str):
     def split_head(text):
         lines = text.replace("\r\n", "\n").split("\n")
         i = 0
-        while i < len(lines) and not ORDERED_ITEM.match(lines[i]):
+        while i < len(lines) and not LIST_ITEM.match(lines[i]):
             i += 1
         return "\n".join(lines[:i]).strip(), "\n".join(lines[i:]).strip()
 
@@ -258,11 +259,11 @@ def _split_lists(src_text: str, zh_text: str):
 
 
 def _looks_like_toc(text: str) -> bool:
-    """True when the page is essentially one big top-level ordered list.
+    """True when the page is essentially one big list (a table of contents).
 
-    Requires at least 8 numbered items and that ~all non-blank body lines are
-    either numbered items or their indented continuations — so prose chapters
-    that merely contain a short list never qualify.
+    Requires at least 8 list items (ordered or bulleted) and that ~all non-blank
+    body lines are either list items or their indented continuations — so prose
+    chapters that merely contain a short list never qualify.
     """
     lines = text.replace("\r\n", "\n").split("\n")
     body, seen_heading = [], False
@@ -274,9 +275,9 @@ def _looks_like_toc(text: str) -> bool:
             body.append(ln)
     if not body:
         return False
-    numbered = sum(1 for ln in body if ORDERED_ITEM.match(ln))
-    in_list = sum(1 for ln in body if ORDERED_ITEM.match(ln) or ln[:1].isspace())
-    return numbered >= 8 and in_list / len(body) >= 0.9
+    items = sum(1 for ln in body if LIST_ITEM.match(ln))
+    in_list = sum(1 for ln in body if LIST_ITEM.match(ln) or ln[:1].isspace())
+    return items >= 8 and in_list / len(body) >= 0.9
 
 
 def _merge_toc(src_text: str, zh_text: str):
@@ -318,17 +319,18 @@ def main() -> None:
     zh_text = Path(sys.argv[2]).read_text(encoding="utf-8")
     out_path = Path(sys.argv[3])
 
-    # TOC pages: avoid Pandoc renumbering the doubled EN/ZH list.
+    # TOC pages: avoid Pandoc renumbering / doubling the EN+ZH list.
     if _looks_like_toc(src_text):
-        if _is_nested_toc(src_text):
-            # nested list -> source tree, divider, translated tree
-            parts = _split_lists(src_text, zh_text)
-        else:
-            # flat list -> merge each entry (source title then translation)
+        parts = None
+        if not _is_nested_toc(src_text):
+            # flat numbered list -> merge each entry (source title then translation)
             parts = _merge_toc(src_text, zh_text)
-        if parts is not None:
-            out_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
-            return
+        if parts is None:
+            # nested list, or a flat bulleted list merge can't pair -> emit the
+            # whole source tree, a divider, then the whole translated tree
+            parts = _split_lists(src_text, zh_text)
+        out_path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
+        return
 
     src = split_blocks(src_text)
     zh = split_blocks(zh_text)
